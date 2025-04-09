@@ -13,7 +13,7 @@
 BASE_DIR=$1
 
 # activate phylowgs environment
-conda init
+source ~/miniconda3/bin/activate
 conda activate phylowgs_env
 
 phylowgs_dir="$(pwd)/2-phylowgs/phylowgs"

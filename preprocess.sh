@@ -7,7 +7,7 @@
 #SBATCH --mem=16G
 
 # activate preprocess environment
-conda init
+source ~/miniconda3/bin/activate
 conda activate preprocess_env
 
 # run preprocess.py
