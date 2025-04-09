@@ -7,6 +7,11 @@
 #SBATCH --mem=8G
 #SBATCH --array=0-20%10
 
+# example usage:
+# sbatch run_phylowgs.sh /path/to/output/directory
+
+BASE_DIR=$1
+
 # activate phylowgs environment
 source activate phylowgs
 
@@ -15,8 +20,13 @@ multievolve="${phylowgs_dir}/multievolve.py"
 write_results="${phylowgs_dir}/write_results.py"
 
 # list of all patient directories
-BASE_DIR="./output"
 PATIENT_DIRS=($(ls -d ${BASE_DIR}/CRUK*))
+
+# Check if any patient directories were found
+if [ ${#PATIENT_DIRS[@]} -eq 0 ]; then
+    echo "Error: No patient directories found in $BASE_DIR"
+    exit 1
+fi
 
 # patient dir for this array task 
 PATIENT_DIR="${PATIENT_DIRS[$SLURM_ARRAY_TASK_ID]}"

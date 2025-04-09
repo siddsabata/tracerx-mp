@@ -7,7 +7,7 @@
 #SBATCH --mem=16G
 
 # activate preprocess environment
-source activate preprocess
+conda activate preprocess_env
 
 # run preprocess.py
 python3 preprocess.py -i data/tracerx_2023_init.csv -o output 
