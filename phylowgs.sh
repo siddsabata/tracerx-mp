@@ -41,7 +41,7 @@ python2 "${multievolve}" --num-chains 5 \
         --cnvs "${PATIENT_DIR}/initial/cnv.txt" \
         --output-dir "${PATIENT_DIR}/initial/chains"
 python2 "${write_results}" --include-ssm-names result \
-                "${PATIENT_DIR}/initial/trees.zip" \
+                "${PATIENT_DIR}/initial/chains/trees.zip" \
                 "${PATIENT_DIR}/initial/result.summ.json.gz" \
                 "${PATIENT_DIR}/initial/result.muts.json.gz" \
                 "${PATIENT_DIR}/initial/result.mutass.zip"
