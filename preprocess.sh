@@ -11,4 +11,4 @@ source ~/miniconda3/bin/activate
 conda activate preprocess_env
 
 # run preprocess.py
-python3 0-preprocess/process_tracerx.py -i data/tracerx_2023_init.csv -o output 
+python3 0-preprocess/process_tracerX.py -i data/tracerx_2023_init.csv -o output 
