@@ -13,8 +13,7 @@
 BASE_DIR=$1
 
 # activate phylowgs environment
-source ~/miniconda3/bin/activate
-conda activate phylowgs_env
+source ~/miniconda3/bin/activate phylowgs_env
 
 phylowgs_dir="$(pwd)/2-phylowgs/phylowgs"
 multievolve="${phylowgs_dir}/multievolve.py"
