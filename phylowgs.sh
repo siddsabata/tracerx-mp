@@ -5,7 +5,7 @@
 #SBATCH --partition=pool1
 #SBATCH --cpus-per-task=5
 #SBATCH --mem=8G
-#SBATCH --array=0-20%10
+#SBATCH --array=0-19%10
 
 # example usage:
 # sbatch run_phylowgs.sh /path/to/output/directory
@@ -39,7 +39,8 @@ echo "Directory: $PATIENT_DIR"
 # run phylowgs 
 python2 "${multievolve}" --num-chains 5 \
         --ssms "${PATIENT_DIR}/initial/ssm.txt" \
-        --cnvs "${PATIENT_DIR}/initial/cnv.txt"
+        --cnvs "${PATIENT_DIR}/initial/cnv.txt" \
+        --output-dir "${PATIENT_DIR}/initial/chains"
 python2 "${write_results}" --include-ssm-names result \
                 "${PATIENT_DIR}/initial/trees.zip" \
                 "${PATIENT_DIR}/initial/result.summ.json.gz" \
