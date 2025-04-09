@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=phylowgs
-#SBATCH --output=logs/preprocess_A_%j.out
-#SBATCH --error=logs/preprocess_A_%j.err
+#SBATCH --output=logs/phylowgs_%A_%j.out
+#SBATCH --error=logs/phylowgs_%A_%j.err
 #SBATCH --partition=pool1
 #SBATCH --cpus-per-task=5
 #SBATCH --mem=8G
