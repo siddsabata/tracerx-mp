@@ -7,8 +7,8 @@
 #SBATCH --mem=16G
 
 # get inputs
-in_csv = $1
-output_dir = $2
+in_csv=$1
+output_dir=$2
 
 # activate preprocess environment
 source ~/miniconda3/bin/activate
