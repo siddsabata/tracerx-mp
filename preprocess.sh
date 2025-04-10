@@ -6,6 +6,8 @@
 #SBATCH --cpus-per-task=5
 #SBATCH --mem=16G
 
+# usage: sbatch preprocess.sh <mutation csv> <output directory>
+
 # Check if both input and output directories are provided
 if [ $# -ne 2 ]; then
     echo "Error: Both input and output paths must be provided"

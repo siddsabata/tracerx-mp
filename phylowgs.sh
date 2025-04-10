@@ -5,7 +5,7 @@
 #SBATCH --mem=8G
 #SBATCH --array=0-19%10
 
-# Usage: sbatch phylowgs.sh /path/to/output/directory
+# Usage: sbatch phylowgs.sh <directory of preprocessed data>
 BASE_DIR=$1
 
 # activate phylowgs environment
