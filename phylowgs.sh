@@ -3,7 +3,7 @@
 #SBATCH --partition=pool1
 #SBATCH --cpus-per-task=5
 #SBATCH --mem=8G
-#SBATCH --array=0-24%10
+#SBATCH --array=0-2
 
 # Usage: sbatch phylowgs.sh <directory of preprocessed data>
 BASE_DIR=$1
