@@ -35,23 +35,17 @@ python3 0-preprocess/process_tracerX.py -i "$INPUT_CSV" -o "$OUTPUT_DIR" -p "$PA
 # Define paths for the bootstrapping step
 # Input CSV for bootstrap.py is the patient-specific initial CSV from process_tracerX.py
 BOOTSTRAP_INPUT_CSV="${OUTPUT_DIR}/${PATIENT_ID}/initial/${PATIENT_ID}_initial.csv"
-# Output directory for bootstrap.py results
-BOOTSTRAP_OUTPUT_DIR="${OUTPUT_DIR}/${PATIENT_ID}/bootstrap_data"
-
-# Ensure the main output directory for bootstrapping exists
-# bootstrap.py will create subdirectories like 'bootstrap1', 'bootstrap2', etc. inside this.
-mkdir -p "$BOOTSTRAP_OUTPUT_DIR"
 
 echo "Running bootstrapping script (bootstrap.py) for patient $PATIENT_ID..."
 echo "Bootstrap input file: $BOOTSTRAP_INPUT_CSV"
-echo "Bootstrap output directory: $BOOTSTRAP_OUTPUT_DIR"
+echo "Bootstrap output directory: $OUTPUT_DIR"
 
 # Run the bootstrap script
 # It's assumed that bootstrap.py is executable and its dependencies are in preprocess_env
 python3 1-bootstrap/bootstrap.py \
     -i "$BOOTSTRAP_INPUT_CSV" \
-    -o "$BOOTSTRAP_OUTPUT_DIR" \
+    -o "$OUTPUT_DIR" \
     -n 100
 
 echo "Preprocessing and bootstrapping for patient $PATIENT_ID completed."
-echo "Bootstrapped files should be in $BOOTSTRAP_OUTPUT_DIR"
+echo "Bootstrapped files should be in $OUTPUT_DIR"
