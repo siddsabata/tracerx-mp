@@ -23,6 +23,10 @@ echo "--- Bootstrap Script Start (initial output to SLURM default log) ---"
 # --- Setup Log and Output Directories --- 
 mkdir -p "$OUTPUT_BASE_DIR/logs"
 
+# Define the actual directory where bootstrapN folders will be created
+BOOTSTRAP_DATA_DIR="$OUTPUT_BASE_DIR/bootstraps"
+mkdir -p "$BOOTSTRAP_DATA_DIR"
+
 # Redirect subsequent script output to files in $OUTPUT_BASE_DIR/logs/
 # These will be overwritten if the script is run multiple times with the same OUTPUT_BASE_DIR.
 exec > "$OUTPUT_BASE_DIR/logs/bootstrap_execution.log" 2> "$OUTPUT_BASE_DIR/logs/bootstrap_execution.err"
@@ -46,7 +50,7 @@ echo "Conda environment preprocess_env activated successfully."
 echo "Running 1-bootstrap/bootstrap.py..."
 python3 1-bootstrap/bootstrap.py \
     -i "$INPUT_SSM_FILE" \
-    -o "$OUTPUT_BASE_DIR" \
+    -o "$BOOTSTRAP_DATA_DIR" \
     -n "$NUM_BOOTSTRAPS"
 
 SCRIPT_EXIT_CODE=$?
@@ -57,7 +61,7 @@ else
     exit $SCRIPT_EXIT_CODE
 fi
 
-echo "Bootstrapped files should be in subdirectories within: $OUTPUT_BASE_DIR"
+echo "Bootstrapped files should be in subdirectories within: $BOOTSTRAP_DATA_DIR"
 echo "Detailed script execution logs are in: $OUTPUT_BASE_DIR/logs/ (bootstrap_execution.log/err)"
 echo "Primary SLURM job log is in the submission directory."
 echo "--- Bootstrap Script End (redirected output) ---" 

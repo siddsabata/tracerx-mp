@@ -26,8 +26,9 @@ fi
 
 echo "--- Aggregation Script Start (initial output to SLURM default log) ---"
 
-# --- Setup Log Directory (within the bootstrap parent directory) --- 
-LOG_DIR_IN_PARENT="$BOOTSTRAP_PARENT_DIR/logs"
+# --- Setup Log Directory (in the parent of BOOTSTRAP_PARENT_DIR) --- 
+# BOOTSTRAP_PARENT_DIR is now expected to be the directory containing bootstrapN folders (e.g., .../initial/bootstraps)
+LOG_DIR_IN_PARENT="$(dirname "$BOOTSTRAP_PARENT_DIR")/logs"
 mkdir -p "$LOG_DIR_IN_PARENT"
 
 # Redirect subsequent script output to files in LOG_DIR_IN_PARENT/
@@ -81,15 +82,44 @@ fi
 
 bootstrap_list=$(seq -s ' ' 1 $NUM_BOOTSTRAPS)
 
+# BOOTSTRAP_PARENT_DIR argument is now the direct path to bootstrapN folders.
+# Define the target output directory for final aggregation results (in the parent of BOOTSTRAP_PARENT_DIR)
+FINAL_AGGREGATION_OUTPUT_DIR="$(dirname "$BOOTSTRAP_PARENT_DIR")/aggregation_results"
+mkdir -p "${FINAL_AGGREGATION_OUTPUT_DIR}"
+
+# Path where the Python script might write its output if relative to its input dir
+TEMP_PYTHON_OUTPUT_DIR="${BOOTSTRAP_PARENT_DIR}/aggregation_results"
+
 echo "Running Python aggregation script: $PROCESS_SCRIPT_PATH"
+echo "Input bootstrap data expected from: $BOOTSTRAP_PARENT_DIR"
+echo "Final aggregation output will be in: $FINAL_AGGREGATION_OUTPUT_DIR"
+
 python "$PROCESS_SCRIPT_PATH" "${PATIENT_ID}" \
     --bootstrap-list $bootstrap_list \
-    --bootstrap-parent-dir "${BOOTSTRAP_PARENT_DIR}" # Pass the direct parent directory
+    --bootstrap-parent-dir "${BOOTSTRAP_PARENT_DIR}" # Pass the directory containing bootstrapN folders directly
     # --method phylowgs # This is the default in the python script, uncomment to override
 
 SCRIPT_EXIT_CODE=$?
 if [ $SCRIPT_EXIT_CODE -eq 0 ]; then
-    echo "Aggregation completed successfully for patient ${PATIENT_ID}."
+    echo "Aggregation Python script completed successfully for patient ${PATIENT_ID}."
+    
+    # Move results if the python script created output within its input bootstrap data directory
+    if [ -d "${TEMP_PYTHON_OUTPUT_DIR}" ]; then
+        echo "Moving aggregation results from ${TEMP_PYTHON_OUTPUT_DIR} to ${FINAL_AGGREGATION_OUTPUT_DIR}"
+        mkdir -p "${FINAL_AGGREGATION_OUTPUT_DIR}" # Ensure target exists
+        # Move contents. Using cp and rm for simplicity.
+        cp -r "${TEMP_PYTHON_OUTPUT_DIR}/"* "${FINAL_AGGREGATION_OUTPUT_DIR}/"
+        if [ $? -eq 0 ]; then
+            echo "Successfully copied results. Removing temporary output directory: ${TEMP_PYTHON_OUTPUT_DIR}"
+            rm -rf "${TEMP_PYTHON_OUTPUT_DIR}"
+        else
+            echo "Error: Failed to copy results from ${TEMP_PYTHON_OUTPUT_DIR} to ${FINAL_AGGREGATION_OUTPUT_DIR}."
+            echo "Manual check required. Temporary files left at ${TEMP_PYTHON_OUTPUT_DIR}"
+        fi
+    else
+        echo "Note: Assumed Python output directory ${TEMP_PYTHON_OUTPUT_DIR} not found. Assuming Python script wrote directly to a pre-configured location or had its own output path logic."
+        echo "Please verify aggregation results are in ${FINAL_AGGREGATION_OUTPUT_DIR}"
+    fi
 else
     echo "Error: Aggregation Python script failed for patient ${PATIENT_ID} with exit code $SCRIPT_EXIT_CODE."
     exit $SCRIPT_EXIT_CODE
