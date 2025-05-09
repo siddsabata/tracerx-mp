@@ -54,10 +54,10 @@ echo "---------------------------------------"
 
 # --- Environment Activation ---
 # Assuming the same environment as aggregation.sh, or a suitable one for run_data.py
-echo "Activating conda environment: aggregation_env" 
-source ~/miniconda3/bin/activate aggregation_env
+echo "Activating conda environment: markers_env" 
+source ~/miniconda3/bin/activate markers_env
 if [ $? -ne 0 ]; then
-    echo "Error: Failed to activate conda environment 'aggregation_env'. Exiting."
+    echo "Error: Failed to activate conda environment 'markers_env'. Exiting."
     exit 1
 fi
 echo "Conda environment activated."
