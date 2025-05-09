@@ -60,13 +60,82 @@ def main():
     # Read from ssm.txt file
     ssm_df = pd.read_csv(ssm_file_path, sep='\t')
 
-    # The old VAF-based pre-filtering is removed as per the plan.
-    # inter = inter[inter["Variant_Frequencies_cf"] < 0.9]  # blood
-    # inter = inter[inter["Variant_Frequencies_st"] < 0.9]  # tissue
-    
-    calls = ssm_df # Use ssm_df as the base for mutation data
+    # --- START VAF Calculation and Filtering ---
+    def get_vaf_list_for_filtering(row):
+        """Helper function to calculate VAFs for a given mutation row from 'a' and 'd' columns."""
+        try:
+            # Ensure 'a' and 'd' are treated as strings for splitting
+            a_counts_str = str(row['a']).split(',')
+            d_counts_str = str(row['d']).split(',')
 
-    # Derive gene_list and gene2idx from ssm_df ('id' column)
+            # Handle cases where columns might be empty or just whitespace after split
+            a_counts = [int(x) for x in a_counts_str if x.strip()]
+            d_counts = [int(x) for x in d_counts_str if x.strip()]
+
+            vafs = []
+            if len(a_counts) != len(d_counts):
+                # This case should ideally not happen with well-formed ssm.txt
+                # print(f"Warning: Mismatch in a/d counts for row: {row.to_dict()}") # Optional warning
+                return [] # Return empty list, will lead to filtering out this mutation by default VAFs
+            
+            for ref_r, tot_d in zip(a_counts, d_counts):
+                if tot_d > 0:
+                    vaf = (tot_d - ref_r) / tot_d
+                    vafs.append(vaf)
+                else:
+                    vafs.append(0.0) # Or handle as per desired logic, e.g., np.nan then fillna
+            return vafs
+        except ValueError:
+            # print(f"Warning: ValueError during VAF calculation for row: {row.to_dict()}") # Optional warning
+            return [] # Error in parsing counts, treat as if no VAFs calculable
+        except Exception as e:
+            # print(f"Warning: Unexpected error {e} during VAF calculation for row: {row.to_dict()}") # Optional warning
+            return []
+
+    ssm_df['vaf_list_for_filter'] = ssm_df.apply(get_vaf_list_for_filtering, axis=1)
+
+    # Remove the specific VAF_filter_s1 and VAF_filter_s2 columns
+    # ssm_df['VAF_filter_s1'] = ssm_df['vaf_list_for_filter'].apply(lambda x: x[0] if len(x) > 0 else 1.0)
+    # ssm_df['VAF_filter_s2'] = ssm_df['vaf_list_for_filter'].apply(lambda x: x[1] if len(x) > 1 else 1.0)
+
+    original_mutation_count = len(ssm_df)
+    
+    # Apply VAF-based pre-filtering: if ANY sample VAF is >= 0.9, exclude the mutation.
+    # A mutation is kept if ALL its VAFs are < 0.9 (or if it has no VAFs, in which case it's kept by default of an empty list). 
+    # The get_vaf_list_for_filtering handles errors by returning empty list, which will pass this filter.
+    # If a mutation must have VAFs to be kept, the condition could be `ssm_df['vaf_list_for_filter'].apply(lambda x: len(x) > 0 and all(vaf < 0.9 for vaf in x))`
+    # For now, we keep it simple: if any VAF is high, filter out. If no VAFs or all VAFs low, keep.
+    
+    # Define a condition to filter: True if mutation should be KEPT (all VAFs < 0.9)
+    # False if mutation should be DISCARDED (at least one VAF >= 0.9 OR no VAFs could be calculated and list is empty)
+    # To correctly discard if ANY vaf >= 0.9:
+    # We want to keep rows where NOT (ANY vaf in list is >= 0.9)
+    # This is equivalent to: ALL vafs in list are < 0.9
+    # If vaf_list_for_filter is empty (e.g. due to parsing error), all() on empty list is True, so it would be kept.
+    # This might be okay, or we might want to explicitly filter out rows with empty vaf_list_for_filter if they signify problematic data.
+    # Let's ensure that if vaf_list_for_filter is empty, it's treated as if it fails the < 0.9 condition for safety, effectively filtering it.
+    # A simple way: keep if list is not empty AND all vafs are < 0.9.
+    
+    def should_keep_mutation(vaf_list):
+        if not vaf_list: # If list is empty (e.g., parsing error, or no samples)
+            return False # Discard mutation if no valid VAFs were found
+        return all(vaf < 0.9 for vaf in vaf_list)
+
+    ssm_df = ssm_df[ssm_df['vaf_list_for_filter'].apply(should_keep_mutation)]
+    
+    # Old filter lines:
+    # ssm_df = ssm_df[ssm_df["VAF_filter_s1"] < 0.9]
+    # ssm_df = ssm_df[ssm_df["VAF_filter_s2"] < 0.9]
+    filtered_mutation_count = len(ssm_df)
+    
+    print(f"VAF PRE-FILTERING: Started with {original_mutation_count} mutations, {filtered_mutation_count} remaining after VAF < 0.9 filter across all samples.")
+    if original_mutation_count > 0 and filtered_mutation_count == 0:
+        print("Warning: VAF pre-filtering removed all mutations. Check VAF values and filtering thresholds.")
+    # --- END VAF Calculation and Filtering ---
+
+    calls = ssm_df # Use filtered ssm_df as the base for mutation data
+
+    # Derive gene_list and gene2idx from the potentially filtered ssm_df ('id' column)
     gene_list = ssm_df['id'].tolist()
     gene2idx = {gene_id: i for i, gene_id in enumerate(gene_list)}
 
