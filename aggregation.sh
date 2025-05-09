@@ -43,10 +43,10 @@ echo "Aggregation results will be placed in: ${BOOTSTRAP_PARENT_DIR}/aggregation
 echo "---------------------------------------"
 
 # --- Environment Activation ---
-echo "Activating conda environment: preprocess_env" # Assuming this is the correct env
-source ~/miniconda3/bin/activate preprocess_env
+echo "Activating conda environment: aggregation_env" # Changed from preprocess_env
+source ~/miniconda3/bin/activate aggregation_env # Changed from preprocess_env
 if [ $? -ne 0 ]; then
-    echo "Error: Failed to activate conda environment 'preprocess_env'. Exiting."
+    echo "Error: Failed to activate conda environment 'aggregation_env'. Exiting."
     exit 1
 fi
 echo "Conda environment activated."
