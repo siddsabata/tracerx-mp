@@ -3,28 +3,20 @@
 #SBATCH --partition=pool1
 #SBATCH --cpus-per-task=5
 #SBATCH --mem=8G
-#SBATCH --array=0-99%10
-# IMPORTANT: User must submit this script with a SLURM --array directive.
-# Example: sbatch --array=0-19%10 phylowgs.sh /path/to/bootstrap_base_dir
+#SBATCH --array=0-99%10 # Processing 100 bootstrap samples (0-99), 10 concurrently
 
-# Usage: sbatch --array=<range> phylowgs.sh <base_directory_containing_bootstrap_folders>
+# Usage: sbatch phylowgs.sh <base_directory_containing_bootstrap_folders>
 
 if [ "$#" -ne 1 ]; then
     echo "Error: Base directory must be provided."
-    echo "Usage: sbatch --array=<range> $0 <base_directory_containing_bootstrap_folders>"
-    exit 1
-fi
-
-if [ -z "$SLURM_ARRAY_TASK_ID" ]; then
-    echo "Error: This script must be run as a SLURM job array. SLURM_ARRAY_TASK_ID is not set."
-    echo "Please submit with a --array option, e.g., sbatch --array=0-19%10 $0 <base_dir>"
+    echo "Usage: sbatch $0 <base_directory_containing_bootstrap_folders>"
     exit 1
 fi
 
 BASE_DIR=$1
 
 if [ ! -d "$BASE_DIR" ]; then
-    echo "Error: Base directory '$BASE_DIR' not found." >&2 # Send error to stderr
+    echo "Error: Base directory '$BASE_DIR' not found." >&2
     exit 1
 fi
 
@@ -35,15 +27,13 @@ phylowgs_dir="$(pwd)/2-phylowgs/phylowgs" # Assumes script is run from project r
 multievolve="${phylowgs_dir}/multievolve.py"
 write_results="${phylowgs_dir}/write_results.py"
 
-# List all bootstrap directories and select the one for this task ID
-# Note: This assumes bootstrap directories are numerically named (bootstrap1, bootstrap2, etc.)
-# and that the array task ID will correspond to these if sorted numerically.
-# A more robust way would be to ensure a specific naming or pass the exact dir name.
-# For simplicity and matching original structure, we rely on ls and array indexing.
+# List all bootstrap directories (sorted naturally)
 BOOTSTRAP_DIRS=($(ls -vd ${BASE_DIR}/bootstrap* 2>/dev/null))
 
+# Check if the SLURM_ARRAY_TASK_ID is valid for the found directories
 if [ "$SLURM_ARRAY_TASK_ID" -ge "${#BOOTSTRAP_DIRS[@]}" ]; then
-    echo "Error: SLURM_ARRAY_TASK_ID $SLURM_ARRAY_TASK_ID is out of bounds for the number of bootstrap directories found (${#BOOTSTRAP_DIRS[@]})." >&2
+    echo "Error: SLURM_ARRAY_TASK_ID $SLURM_ARRAY_TASK_ID is out of bounds. Found ${#BOOTSTRAP_DIRS[@]} bootstrap directories in $BASE_DIR." >&2
+    echo "Ensure there are at least $(($SLURM_ARRAY_TASK_ID + 1)) bootstrap directories (e.g., bootstrap1, bootstrap2, ..., bootstrap$(($SLURM_ARRAY_TASK_ID + 1)))" >&2
     exit 1
 fi
 
