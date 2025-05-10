@@ -19,6 +19,9 @@ PATIENT_BASE_DIR=$3
 NUM_BOOTSTRAPS=${4:-100}  # Default to 100 if not provided
 READ_DEPTH=${5:-1500}     # Default to 1500 if not provided
 
+# --- Normalize PATIENT_BASE_DIR (remove trailing slashes) ---
+PATIENT_BASE_DIR=$(echo "${PATIENT_BASE_DIR}" | sed 's:/*$::')
+
 # --- Validate Input Files/Directories ---
 if [ ! -f "$INPUT_SSM_FILE" ]; then
     echo "Error: Input SSM file not found: $INPUT_SSM_FILE"
@@ -63,7 +66,7 @@ echo "----------------------------------------"
 submit_job() {
     local job_name=$1
     local dependency=$2
-    local script=$3
+    local script_path=$3 # Renamed from script to avoid conflict
     shift 3
     local args=("$@")
     
@@ -72,21 +75,46 @@ submit_job() {
         dependency_flag="--dependency=afterok:${dependency}"
     fi
     
-    echo "Submitting ${job_name}..."
-    local job_id=$(sbatch --parsable \
-        --job-name="${PATIENT_ID}_${job_name}" \
-        --output="${LOG_DIR}/slurm_${job_name}_%j.out" \
-        --error="${LOG_DIR}/slurm_${job_name}_%j.err" \
-        ${dependency_flag} \
-        "${script}" "${args[@]}")
+    echo "Submitting ${job_name} (Script: ${script_path})..." # Added script_path for clarity
     
-    if [ -z "${job_id}" ]; then
-        echo "Error: Failed to submit ${job_name} job"
-        exit 1
+    # Use an array for the sbatch command to handle arguments with spaces robustly
+    local sbatch_cmd_array=(
+        sbatch --parsable
+        --job-name="${PATIENT_ID}_${job_name}"
+        --output="${LOG_DIR}/slurm_${job_name}_%j.out"
+        --error="${LOG_DIR}/slurm_${job_name}_%j.err"
+    )
+    if [ ! -z "$dependency_flag" ]; then
+        sbatch_cmd_array+=("$dependency_flag") # Add dependency flag if it's set
+    fi
+    sbatch_cmd_array+=("${script_path}") # Add the script path
+    sbatch_cmd_array+=("${args[@]}")     # Add all other arguments
+
+    # For debugging, uncomment the following line to see the exact sbatch command:
+    # echo "Executing sbatch command: ${sbatch_cmd_array[*]}"
+
+    local job_id_output
+    job_id_output=$("${sbatch_cmd_array[@]}")
+    local sbatch_status=$?
+
+    if [ ${sbatch_status} -ne 0 ] || [ -z "${job_id_output}" ]; then
+        # sbatch command failed or produced no output (which is an error with --parsable on success)
+        echo "Error: Failed to submit ${job_name} job. sbatch command exited with status ${sbatch_status}."
+        echo "Script path attempted: ${script_path}"
+        if [ -z "${job_id_output}" ] && [ ${sbatch_status} -eq 0 ]; then
+             echo "sbatch command succeeded (status 0) but produced no job ID. This is unexpected with --parsable."
+        elif [ ! -z "${job_id_output}" ]; then
+             # If sbatch failed but still produced output, it might be an error message.
+             echo "sbatch output (if any): ${job_id_output}"
+        fi
+        # The script will exit here due to "set -e" if sbatch_status is non-zero,
+        # or the explicit exit below.
+        exit 1 
     fi
     
+    local job_id="${job_id_output}" # sbatch was successful and job_id_output contains the job ID
     echo "${job_name} job submitted with ID: ${job_id}"
-    echo "${job_id}"
+    echo "${job_id}" # This is the return value of the function
 }
 
 # --- Step 1: Bootstrap ---
