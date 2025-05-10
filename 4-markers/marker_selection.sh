@@ -32,24 +32,28 @@ fi
 
 echo "--- Marker Selection Script Start (initial output to SLURM default log) ---"
 
-# --- Setup Log Directory (within the aggregation directory's parent) --- 
-# This is for the SLURM script's own execution logs, not the Python script's output.
-# Adjusted to use the same log directory as aggregation.sh
-SLURM_LOG_DIR="$(dirname "$AGGREGATION_DIR")/logs" # Changed from "$AGGREGATION_DIR/logs"
-mkdir -p "$SLURM_LOG_DIR"
+# --- Setup directories and paths ---
+# Get the parent directory of the aggregation directory (should be the 'initial' directory)
+INITIAL_DIR="$(dirname "$AGGREGATION_DIR")"
+MARKERS_DIR="${INITIAL_DIR}/markers"
+LOG_DIR="${INITIAL_DIR}/logs"
 
-# Redirect subsequent script output to files in SLURM_LOG_DIR/
-exec > "$SLURM_LOG_DIR/marker_selection_execution.log" 2> "$SLURM_LOG_DIR/marker_selection_execution.err"
+# Create the markers directory if it doesn't exist
+mkdir -p "${MARKERS_DIR}"
+mkdir -p "${LOG_DIR}"
+
+# Redirect subsequent script output to files in LOG_DIR/
+exec > "$LOG_DIR/marker_selection_execution.log" 2> "$LOG_DIR/marker_selection_execution.err"
 
 # From this point, all echo and command output goes to the files defined above.
 echo "--- Marker Selection Script Execution (output redirected) ---"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Patient ID: ${PATIENT_ID}"
 echo "Aggregation Directory: ${AGGREGATION_DIR}"
+echo "Markers Directory: ${MARKERS_DIR}"
 echo "SSM File: ${SSM_FILE}"
 echo "Read Depth: ${READ_DEPTH}"
-echo "Python script output will be placed in: ${AGGREGATION_DIR}/marker_selection_output/"
-echo "SLURM script execution logs are in: ${SLURM_LOG_DIR}/"
+echo "Log Directory: ${LOG_DIR}"
 echo "---------------------------------------"
 
 # --- Environment Activation ---
@@ -76,7 +80,8 @@ echo "Running Python marker selection script: $MARKER_SCRIPT_PATH"
 python "$MARKER_SCRIPT_PATH" "${PATIENT_ID}" \
     --aggregation-dir "${AGGREGATION_DIR}" \
     --ssm-file "${SSM_FILE}" \
-    --read-depth "${READ_DEPTH}"
+    --read-depth "${READ_DEPTH}" \
+    --output-dir "${MARKERS_DIR}"
 
 SCRIPT_EXIT_CODE=$?
 if [ $SCRIPT_EXIT_CODE -eq 0 ]; then
@@ -87,7 +92,7 @@ else
     exit $SCRIPT_EXIT_CODE 
 fi
 
-echo "Detailed Python script output is in: $AGGREGATION_DIR/marker_selection_output/"
-echo "SLURM script execution logs are in: $SLURM_LOG_DIR/ (marker_selection_execution.log/err)"
+echo "Detailed Python script output is in: ${MARKERS_DIR}"
+echo "Script execution logs are in: ${LOG_DIR} (marker_selection_execution.log/err)"
 echo "Primary SLURM job log (initial messages) is in the submission directory (e.g., slurm-$SLURM_JOB_ID.out)."
 echo "--- Marker Selection Script End (redirected output) ---" 

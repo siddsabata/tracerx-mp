@@ -1,13 +1,13 @@
 #!/bin/bash
 # run_pipeline.sh - Master script to orchestrate the TracerX marker selection pipeline
-# Usage: ./run_pipeline.sh <patient_id> <input_ssm_file> <pipeline_output_base_dir> [num_bootstraps] [read_depth]
+# Usage: ./run_pipeline.sh <patient_id> <input_ssm_file> <patient_base_dir> [num_bootstraps] [read_depth]
 
 set -e  # Exit on any error
 
 # --- Input Validation ---
 if [ "$#" -lt 3 ] || [ "$#" -gt 5 ]; then
     echo "Error: Incorrect number of arguments."
-    echo "Usage: $0 <patient_id> <input_ssm_file> <pipeline_output_base_dir> [num_bootstraps] [read_depth]"
+    echo "Usage: $0 <patient_id> <input_ssm_file> <patient_base_dir> [num_bootstraps] [read_depth]"
     echo "Example: $0 CRUK0001 /path/to/data/CRUK0001/ssm.txt /path/to/output/CRUK0001 100 1500"
     exit 1
 fi
@@ -15,7 +15,7 @@ fi
 # --- Parse Arguments ---
 PATIENT_ID=$1
 INPUT_SSM_FILE=$2
-PIPELINE_OUTPUT_BASE_DIR=$3
+PATIENT_BASE_DIR=$3
 NUM_BOOTSTRAPS=${4:-100}  # Default to 100 if not provided
 READ_DEPTH=${5:-1500}     # Default to 1500 if not provided
 
@@ -25,15 +25,22 @@ if [ ! -f "$INPUT_SSM_FILE" ]; then
     exit 1
 fi
 
-# --- Define Derived Paths ---
-BOOTSTRAP_STAGE_OUTPUT_DIR="${PIPELINE_OUTPUT_BASE_DIR}"
+# --- Define Initial Directory Structure ---
+# Create an 'initial' subdirectory for all processing
+INITIAL_DIR="${PATIENT_BASE_DIR}/initial"
+BOOTSTRAP_STAGE_OUTPUT_DIR="${INITIAL_DIR}"
 BOOTSTRAPS_DATA_DIR="${BOOTSTRAP_STAGE_OUTPUT_DIR}/bootstraps"
 AGGREGATION_RESULTS_DIR="${BOOTSTRAP_STAGE_OUTPUT_DIR}/aggregation_results"
-LOG_DIR="${PIPELINE_OUTPUT_BASE_DIR}/logs"
+MARKERS_DIR="${BOOTSTRAP_STAGE_OUTPUT_DIR}/markers"
+LOG_DIR="${INITIAL_DIR}/logs"
 
 # --- Create Required Directories ---
+mkdir -p "${PATIENT_BASE_DIR}"
+mkdir -p "${INITIAL_DIR}"
+mkdir -p "${BOOTSTRAPS_DATA_DIR}"
+mkdir -p "${AGGREGATION_RESULTS_DIR}"
+mkdir -p "${MARKERS_DIR}"
 mkdir -p "${LOG_DIR}"
-mkdir -p "${BOOTSTRAP_STAGE_OUTPUT_DIR}"
 
 # --- Logging Setup ---
 MASTER_LOG="${LOG_DIR}/pipeline_master.log"
@@ -42,7 +49,8 @@ exec > >(tee -a "${MASTER_LOG}") 2>&1
 echo "=== Pipeline Start: $(date) ==="
 echo "Patient ID: ${PATIENT_ID}"
 echo "Input SSM: ${INPUT_SSM_FILE}"
-echo "Output Base: ${PIPELINE_OUTPUT_BASE_DIR}"
+echo "Patient Base Directory: ${PATIENT_BASE_DIR}"
+echo "Initial Processing Directory: ${INITIAL_DIR}"
 echo "Number of Bootstraps: ${NUM_BOOTSTRAPS}"
 echo "Read Depth: ${READ_DEPTH}"
 echo "Log Directory: ${LOG_DIR}"

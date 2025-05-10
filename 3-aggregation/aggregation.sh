@@ -55,7 +55,7 @@ echo "Conda environment activated."
 # --- Script Paths and Execution ---
 # Get the directory where this script is located
 SCRIPT_DIR_ABS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROCESS_SCRIPT_PATH="${SCRIPT_DIR_ABS}/process_tracerx_bootstrap.py"
+PROCESS_SCRIPT_PATH="${SCRIPT_DIR_ABS}/aggregate.py"
 
 if [ ! -f "$PROCESS_SCRIPT_PATH" ]; then
     echo "Error: Aggregation Python script not found at $PROCESS_SCRIPT_PATH. Exiting."

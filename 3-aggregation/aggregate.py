@@ -153,7 +153,7 @@ if __name__ == "__main__":
 
 """
 Example usage based on new structure:
-python 3-aggregation/process_tracerx_bootstrap.py CRUK0044 \
+python 3-aggregation/aggregate.py CRUK0044 \
     --bootstrap-list $(seq 1 100) \
     --bootstrap-parent-dir /path/to/data/CRUK0044/initial/ \
     --method phylowgs

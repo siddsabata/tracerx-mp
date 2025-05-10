@@ -28,6 +28,9 @@ def parse_args():
     parser.add_argument('--ssm-file', type=str, required=True,
                         help='Path to the ssm.txt file for this patient')
     
+    parser.add_argument('--output-dir', type=str,
+                        help='Path to output directory for marker selection results (default: {aggregation-dir}/marker_selection_output)')
+    
     return parser.parse_args()
 
 def main():
@@ -38,6 +41,10 @@ def main():
     # Set up paths
     aggregation_dir = args.aggregation_dir
     ssm_file_path = args.ssm_file
+    
+    # Define output directory - either use provided or default
+    output_dir = args.output_dir if args.output_dir else os.path.join(args.aggregation_dir, 'marker_selection_output')
+    os.makedirs(output_dir, exist_ok=True)
 
     # Define file paths
     tree_distribution_file = os.path.join(aggregation_dir, 'phylowgs_bootstrap_aggregation.pkl')
@@ -205,9 +212,6 @@ def main():
         clonal_freq_list_scrub.append(temp)
 
     # Run marker selection with different methods and parameters
-    output_dir = os.path.join(args.aggregation_dir, 'marker_selection_output')
-    os.makedirs(output_dir, exist_ok=True)
-
     # Save marker selection results to a text file
     results_file = os.path.join(output_dir, f'{patient}_marker_selection_results.txt')
     with open(results_file, 'w') as f:
