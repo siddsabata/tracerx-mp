@@ -25,6 +25,9 @@ if [ ! -f "$INPUT_SSM_FILE" ]; then
     exit 1
 fi
 
+# --- Get script directory for absolute paths ---
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
 # --- Define Initial Directory Structure ---
 # Create an 'initial' subdirectory for all processing
 INITIAL_DIR="${PATIENT_BASE_DIR}/initial"
@@ -89,25 +92,25 @@ submit_job() {
 # --- Step 1: Bootstrap ---
 echo "Starting Bootstrap Stage..."
 BOOTSTRAP_JOB_ID=$(submit_job "bootstrap" "" \
-    "./1-bootstrap/bootstrap.sh" \
+    "${SCRIPT_DIR}/1-bootstrap/bootstrap.sh" \
     "${INPUT_SSM_FILE}" "${BOOTSTRAP_STAGE_OUTPUT_DIR}" "${NUM_BOOTSTRAPS}")
 
 # --- Step 2: PhyloWGS (Array Job) ---
 echo "Starting PhyloWGS Stage..."
 PHYLOWGS_JOB_ID=$(submit_job "phylowgs" "${BOOTSTRAP_JOB_ID}" \
-    "./2-phylowgs/phylowgs.sh" \
+    "${SCRIPT_DIR}/2-phylowgs/phylowgs.sh" \
     "${BOOTSTRAPS_DATA_DIR}")
 
 # --- Step 3: Aggregation ---
 echo "Starting Aggregation Stage..."
 AGGREGATION_JOB_ID=$(submit_job "aggregation" "${PHYLOWGS_JOB_ID}" \
-    "./3-aggregation/aggregation.sh" \
+    "${SCRIPT_DIR}/3-aggregation/aggregation.sh" \
     "${PATIENT_ID}" "${BOOTSTRAPS_DATA_DIR}")
 
 # --- Step 4: Marker Selection ---
 echo "Starting Marker Selection Stage..."
 MARKER_SELECTION_JOB_ID=$(submit_job "marker_selection" "${AGGREGATION_JOB_ID}" \
-    "./4-markers/marker_selection.sh" \
+    "${SCRIPT_DIR}/4-markers/marker_selection.sh" \
     "${PATIENT_ID}" "${AGGREGATION_RESULTS_DIR}" "${INPUT_SSM_FILE}" "${READ_DEPTH}")
 
 # --- Final Status ---
