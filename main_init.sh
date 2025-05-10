@@ -66,28 +66,34 @@ echo "----------------------------------------"
 submit_job() {
     local job_name=$1
     local dependency=$2
-    local script_path=$3 # Renamed from script to avoid conflict
+    local script_path=$3 # This is the full path to the script, e.g., ${SCRIPT_DIR}/1-bootstrap/bootstrap.sh
     shift 3
     local args=("$@")
+
+    local script_containing_dir
+    script_containing_dir=$(dirname "$script_path") # Extracts the directory, e.g., ${SCRIPT_DIR}/1-bootstrap
     
     local dependency_flag=""
     if [ ! -z "$dependency" ]; then
         dependency_flag="--dependency=afterok:${dependency}"
     fi
     
-    echo "Submitting ${job_name} (Script: ${script_path})..." >&2 # Redirect to stderr
+    echo "Submitting ${job_name} (Script: ${script_path} in directory: ${script_containing_dir})..." >&2 # Redirect to stderr
     
     # Use an array for the sbatch command to handle arguments with spaces robustly
     local sbatch_cmd_array=(
         sbatch --parsable
+        --chdir="${script_containing_dir}" # Set the working directory for the Slurm job
         --job-name="${PATIENT_ID}_${job_name}"
-        --output="${LOG_DIR}/slurm_${job_name}_%j.out"
-        --error="${LOG_DIR}/slurm_${job_name}_%j.err"
+        --output="${LOG_DIR}/slurm_${job_name}_%j.out" # sbatch will try to create this relative to chdir if not absolute
+        --error="${LOG_DIR}/slurm_${job_name}_%j.err"  # sbatch will try to create this relative to chdir if not absolute
     )
     if [ ! -z "$dependency_flag" ]; then
         sbatch_cmd_array+=("$dependency_flag") # Add dependency flag if it's set
     fi
-    sbatch_cmd_array+=("${script_path}") # Add the script path
+    # When using --chdir, sbatch expects the script path to be relative to the chdir path,
+    # or an absolute path. Using an absolute path is safer.
+    sbatch_cmd_array+=("${script_path}") # Add the absolute script path
     sbatch_cmd_array+=("${args[@]}")     # Add all other arguments
 
     # For debugging, uncomment the following line to see the exact sbatch command:
