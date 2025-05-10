@@ -23,7 +23,18 @@ fi
 # activate phylowgs environment
 source ~/miniconda3/bin/activate phylowgs_env
 
-phylowgs_dir="$(pwd)/2-phylowgs/phylowgs" # Assumes script is run from project root
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Assumes the phylowgs directory is inside the 2-phylowgs directory (installed by install_phylowgs.sh)
+phylowgs_dir="${SCRIPT_DIR}/phylowgs"
+
+# Check if phylowgs directory exists
+if [ ! -d "$phylowgs_dir" ]; then
+    echo "Error: PhyloWGS directory not found at $phylowgs_dir." >&2
+    echo "Make sure to run install_phylowgs.sh first to set up the required software." >&2
+    exit 1
+fi
+
 multievolve="${phylowgs_dir}/multievolve.py"
 write_results="${phylowgs_dir}/write_results.py"
 

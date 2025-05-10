@@ -47,17 +47,19 @@ fi
 echo "Conda environment preprocess_env activated successfully."
 
 # --- Run Bootstrap Script ---
-echo "Running 1-bootstrap/bootstrap.py..."
-python3 1-bootstrap/bootstrap.py \
+echo "Running bootstrap.py..."
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+python3 "${SCRIPT_DIR}/bootstrap.py" \
     -i "$INPUT_SSM_FILE" \
     -o "$BOOTSTRAP_DATA_DIR" \
     -n "$NUM_BOOTSTRAPS"
 
 SCRIPT_EXIT_CODE=$?
 if [ $SCRIPT_EXIT_CODE -eq 0 ]; then
-    echo "1-bootstrap/bootstrap.py completed successfully."
+    echo "bootstrap.py completed successfully."
 else
-    echo "Error: 1-bootstrap/bootstrap.py script failed with exit code $SCRIPT_EXIT_CODE."
+    echo "Error: bootstrap.py script failed with exit code $SCRIPT_EXIT_CODE."
     exit $SCRIPT_EXIT_CODE
 fi
 

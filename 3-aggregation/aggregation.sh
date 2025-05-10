@@ -53,31 +53,13 @@ fi
 echo "Conda environment activated."
 
 # --- Script Paths and Execution ---
-# Assuming process_tracerx_bootstrap.py is in a '3-aggregation' subdirectory 
-# relative to where aggregation.sh is located or in a globally known path.
-# For robustness, you might want to define SCRIPT_DIR as in previous versions if they are co-located.
-# For simplicity now, directly calling script assuming it's in PATH or relative path is fine.
-PROCESS_SCRIPT_PATH="3-aggregation/process_tracerx_bootstrap.py" 
+# Get the directory where this script is located
+SCRIPT_DIR_ABS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROCESS_SCRIPT_PATH="${SCRIPT_DIR_ABS}/process_tracerx_bootstrap.py"
 
 if [ ! -f "$PROCESS_SCRIPT_PATH" ]; then
-    echo "Error: Aggregation Python script not found at $PROCESS_SCRIPT_PATH. Make sure it is accessible."
-    # Try to find it relative to this script's location if the fixed path fails
-    SCRIPT_DIR_ABS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" # Absolute dir of this script
-    ALT_PROCESS_SCRIPT_PATH="${SCRIPT_DIR_ABS%/*}/3-aggregation/process_tracerx_bootstrap.py" # Assumes aggregation.sh is in a dir one level above 3-aggregation
-    if [ -f "$ALT_PROCESS_SCRIPT_PATH" ]; then 
-        PROCESS_SCRIPT_PATH="$ALT_PROCESS_SCRIPT_PATH"
-        echo "Found script at alternative path: $PROCESS_SCRIPT_PATH"
-    else 
-        SCRIPT_DIR_FALLBACK="$(dirname "$0")"
-        ALT_PROCESS_SCRIPT_PATH2="${SCRIPT_DIR_FALLBACK}/../3-aggregation/process_tracerx_bootstrap.py" # If aggregation.sh is in e.g. /scripts and py is in /3-aggregation
-         if [ -f "$ALT_PROCESS_SCRIPT_PATH2" ]; then
-            PROCESS_SCRIPT_PATH="$ALT_PROCESS_SCRIPT_PATH2"
-            echo "Found script at alternative path: $PROCESS_SCRIPT_PATH"
-         else
-            echo "Also tried $ALT_PROCESS_SCRIPT_PATH and $ALT_PROCESS_SCRIPT_PATH2. Exiting."
-            exit 1
-         fi
-    fi
+    echo "Error: Aggregation Python script not found at $PROCESS_SCRIPT_PATH. Exiting."
+    exit 1
 fi
 
 bootstrap_list=$(seq -s ' ' 1 $NUM_BOOTSTRAPS)

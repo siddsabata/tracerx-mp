@@ -63,33 +63,13 @@ fi
 echo "Conda environment activated."
 
 # --- Script Paths and Execution ---
-# Assuming run_data.py is in a '4-markers' subdirectory 
-# relative to where this script is run or in a globally known path.
-# For robustness, determine script's own directory if needed.
-# This assumes the script will be run from the project root or similar context.
-MARKER_SCRIPT_PATH="4-markers/run_data.py" 
+# Get the directory where this script is located
+SCRIPT_DIR_ABS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MARKER_SCRIPT_PATH="${SCRIPT_DIR_ABS}/run_data.py"
 
 if [ ! -f "$MARKER_SCRIPT_PATH" ]; then
-    echo "Error: Marker selection Python script not found at $MARKER_SCRIPT_PATH."
-    # Attempt to find it relative to this script's location if the fixed path fails
-    # This logic is similar to aggregation.sh for finding its Python script.
-    SCRIPT_DIR_ABS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    # If this sbatch script is in a 'scripts' dir, and 4-markers is a sibling of 'scripts'
-    ALT_MARKER_SCRIPT_PATH="${SCRIPT_DIR_ABS}/../4-markers/run_data.py" 
-    if [ -f "$ALT_MARKER_SCRIPT_PATH" ]; then 
-        MARKER_SCRIPT_PATH="$ALT_MARKER_SCRIPT_PATH"
-        echo "Found script at alternative path: $MARKER_SCRIPT_PATH"
-    else
-        # If this sbatch script is at the root, and 4-markers is ./4-markers/
-        ALT_MARKER_SCRIPT_PATH2="${SCRIPT_DIR_ABS}/4-markers/run_data.py"
-         if [ -f "$ALT_MARKER_SCRIPT_PATH2" ]; then
-            MARKER_SCRIPT_PATH="$ALT_MARKER_SCRIPT_PATH2"
-            echo "Found script at alternative path: $MARKER_SCRIPT_PATH"
-         else
-            echo "Also tried $ALT_MARKER_SCRIPT_PATH and $ALT_MARKER_SCRIPT_PATH2. Exiting."
-            exit 1
-         fi
-    fi
+    echo "Error: Marker selection Python script not found at $MARKER_SCRIPT_PATH. Exiting."
+    exit 1
 fi
 
 echo "Running Python marker selection script: $MARKER_SCRIPT_PATH"
