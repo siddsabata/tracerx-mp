@@ -75,7 +75,7 @@ submit_job() {
         dependency_flag="--dependency=afterok:${dependency}"
     fi
     
-    echo "Submitting ${job_name} (Script: ${script_path})..." # Added script_path for clarity
+    echo "Submitting ${job_name} (Script: ${script_path})..." >&2 # Redirect to stderr
     
     # Use an array for the sbatch command to handle arguments with spaces robustly
     local sbatch_cmd_array=(
@@ -91,7 +91,7 @@ submit_job() {
     sbatch_cmd_array+=("${args[@]}")     # Add all other arguments
 
     # For debugging, uncomment the following line to see the exact sbatch command:
-    # echo "Executing sbatch command: ${sbatch_cmd_array[*]}"
+    # echo "Executing sbatch command: ${sbatch_cmd_array[*]}" >&2
 
     local job_id_output
     job_id_output=$("${sbatch_cmd_array[@]}")
@@ -99,13 +99,13 @@ submit_job() {
 
     if [ ${sbatch_status} -ne 0 ] || [ -z "${job_id_output}" ]; then
         # sbatch command failed or produced no output (which is an error with --parsable on success)
-        echo "Error: Failed to submit ${job_name} job. sbatch command exited with status ${sbatch_status}."
-        echo "Script path attempted: ${script_path}"
+        echo "Error: Failed to submit ${job_name} job. sbatch command exited with status ${sbatch_status}." >&2 # Redirect to stderr
+        echo "Script path attempted: ${script_path}" >&2 # Redirect to stderr
         if [ -z "${job_id_output}" ] && [ ${sbatch_status} -eq 0 ]; then
-             echo "sbatch command succeeded (status 0) but produced no job ID. This is unexpected with --parsable."
+             echo "sbatch command succeeded (status 0) but produced no job ID. This is unexpected with --parsable." >&2 # Redirect to stderr
         elif [ ! -z "${job_id_output}" ]; then
              # If sbatch failed but still produced output, it might be an error message.
-             echo "sbatch output (if any): ${job_id_output}"
+             echo "sbatch output (if any): ${job_id_output}" >&2 # Redirect to stderr
         fi
         # The script will exit here due to "set -e" if sbatch_status is non-zero,
         # or the explicit exit below.
@@ -113,8 +113,8 @@ submit_job() {
     fi
     
     local job_id="${job_id_output}" # sbatch was successful and job_id_output contains the job ID
-    echo "${job_name} job submitted with ID: ${job_id}"
-    echo "${job_id}" # This is the return value of the function
+    echo "${job_name} job submitted with ID: ${job_id}" >&2 # Redirect to stderr
+    echo "${job_id}" # This is the return value of the function (sent to stdout)
 }
 
 # --- Step 1: Bootstrap ---
