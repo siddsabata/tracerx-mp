@@ -57,6 +57,13 @@ tracerx-mp/
     └── ssm_subset.txt       # Subset with key mutations for testing 
 ```
 
+## Important Implementation Note
+**Code and Data Directory Separation**: This pipeline is designed with a clear separation between:
+1. **Code Directory**: Where the pipeline scripts and tools are stored (e.g., `/path/to/tracerx-mp/`)
+2. **Data/Output Directories**: Where input data and analysis results are stored (e.g., `/path/to/patient_data/`)
+
+When running pipeline components, absolute paths must be used to reference both code and data locations since Slurm job submission can change the working directory. All scripts should account for this separation to ensure proper operation on different systems.
+
 ## Input Data Format
 The pipeline requires a Somatic Single Mutation (SSM) file as input, which contains the following columns:
 - `id`: Unique mutation identifier (e.g., s0, s1, ...)

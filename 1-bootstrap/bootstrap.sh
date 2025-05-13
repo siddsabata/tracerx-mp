@@ -5,18 +5,19 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=8G
 
-# Usage: sbatch bootstrap.sh <input_ssm_file> <output_directory> [num_bootstraps]
+# Usage: sbatch bootstrap.sh <input_ssm_file> <output_directory> <code_directory> [num_bootstraps]
 
 # --- Argument Parsing --- 
-if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then
     echo "Error: Incorrect number of arguments."
-    echo "Usage: sbatch $0 <input_ssm_file> <output_directory> [num_bootstraps (default: 100)]"
+    echo "Usage: sbatch $0 <input_ssm_file> <output_directory> <code_directory> [num_bootstraps (default: 100)]"
     exit 1
 fi
 
 INPUT_SSM_FILE=$1
 OUTPUT_BASE_DIR=$2
-NUM_BOOTSTRAPS=${3:-100} # Default to 100 if not provided
+CODE_DIR=$3
+NUM_BOOTSTRAPS=${4:-100} # Default to 100 if not provided
 
 echo "--- Bootstrap Script Start (initial output to SLURM default log) ---"
 
@@ -35,6 +36,7 @@ exec > "$OUTPUT_BASE_DIR/logs/bootstrap_execution.log" 2> "$OUTPUT_BASE_DIR/logs
 echo "--- Bootstrap Script Execution (output redirected) ---"
 echo "Input SSM File: $INPUT_SSM_FILE"
 echo "Output Base Directory: $OUTPUT_BASE_DIR"
+echo "Code Directory: $CODE_DIR"
 echo "Number of Bootstraps: $NUM_BOOTSTRAPS"
 
 # --- Environment Activation ---
@@ -48,11 +50,20 @@ echo "Conda environment preprocess_env activated successfully."
 
 # --- Run Bootstrap Script ---
 echo "Running bootstrap.py..."
-# Find the absolute path to the bootstrap script directory
-SCRIPT_PATH=$(readlink -f $(dirname "$0"))
-echo "Script directory resolved as: $SCRIPT_PATH"
 
-python3 "$SCRIPT_PATH/bootstrap.py" \
+# Use the absolute path to the bootstrap.py file based on the provided code directory
+BOOTSTRAP_PY_PATH="${CODE_DIR}/1-bootstrap/bootstrap.py"
+echo "Using bootstrap.py at: $BOOTSTRAP_PY_PATH"
+
+# Verify the bootstrap.py file exists
+if [ ! -f "$BOOTSTRAP_PY_PATH" ]; then
+    echo "Error: Could not find bootstrap.py at $BOOTSTRAP_PY_PATH"
+    echo "Current working directory: $(pwd)"
+    echo "Files in code directory: $(ls -la $CODE_DIR/1-bootstrap/)"
+    exit 1
+fi
+
+python3 "$BOOTSTRAP_PY_PATH" \
     -i "$INPUT_SSM_FILE" \
     -o "$BOOTSTRAP_DATA_DIR" \
     -n "$NUM_BOOTSTRAPS"
