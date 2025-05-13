@@ -56,9 +56,9 @@ CURRENT_BOOTSTRAP_DIR_PATH="${BOOTSTRAP_DIRS[$SLURM_ARRAY_TASK_ID]}"
 BOOTSTRAP_DIR_NAME=$(basename "$CURRENT_BOOTSTRAP_DIR_PATH")
 BOOTSTRAP_NUM=$(echo "$BOOTSTRAP_DIR_NAME" | sed 's/bootstrap//') # Extracts N from bootstrapN
 
-# Create bootstrap-specific log directory and redirect output
-mkdir -p "${CURRENT_BOOTSTRAP_DIR_PATH}/logs"
-exec > "${CURRENT_BOOTSTRAP_DIR_PATH}/logs/phylowgs_${BOOTSTRAP_DIR_NAME}.log" 2> "${CURRENT_BOOTSTRAP_DIR_PATH}/logs/phylowgs_${BOOTSTRAP_DIR_NAME}.err"
+# Create bootstrap-specific log directory with a dedicated phylowgs subdirectory
+mkdir -p "${CURRENT_BOOTSTRAP_DIR_PATH}/logs/phylowgs"
+exec > "${CURRENT_BOOTSTRAP_DIR_PATH}/logs/phylowgs/${BOOTSTRAP_DIR_NAME}.log" 2> "${CURRENT_BOOTSTRAP_DIR_PATH}/logs/phylowgs/${BOOTSTRAP_DIR_NAME}.err"
 
 echo "--- PhyloWGS Processing for Bootstrap Sample: $BOOTSTRAP_DIR_NAME ---"
 echo "Job ID: $SLURM_JOB_ID, Array Task ID: $SLURM_ARRAY_TASK_ID"
@@ -107,3 +107,5 @@ if [ $PY2_WRITE_EXIT_CODE -ne 0 ]; then
 fi
 
 echo "--- Completed PhyloWGS for Bootstrap Sample: $BOOTSTRAP_DIR_NAME ---"
+# Explicit successful exit to ensure dependency is satisfied
+exit 0
