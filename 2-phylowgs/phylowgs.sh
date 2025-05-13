@@ -5,28 +5,32 @@
 #SBATCH --mem=8G
 #SBATCH --array=0-99%10 # Processing 100 bootstrap samples (0-99), 10 concurrently
 
-# Usage: sbatch phylowgs.sh <base_directory_containing_bootstrap_folders>
+# Usage: sbatch phylowgs.sh <base_directory_containing_bootstrap_folders> <code_directory>
 
-if [ "$#" -ne 1 ]; then
-    echo "Error: Base directory must be provided."
-    echo "Usage: sbatch $0 <base_directory_containing_bootstrap_folders>"
+if [ "$#" -ne 2 ]; then
+    echo "Error: Incorrect number of arguments."
+    echo "Usage: sbatch $0 <base_directory_containing_bootstrap_folders> <code_directory>"
     exit 1
 fi
 
 BASE_DIR=$1
+CODE_DIR=$2
 
 if [ ! -d "$BASE_DIR" ]; then
     echo "Error: Base directory '$BASE_DIR' not found." >&2
     exit 1
 fi
 
+if [ ! -d "$CODE_DIR" ]; then
+    echo "Error: Code directory '$CODE_DIR' not found." >&2
+    exit 1
+fi
+
 # activate phylowgs environment
 source ~/miniconda3/bin/activate phylowgs_env
 
-# Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Assumes the phylowgs directory is inside the 2-phylowgs directory (installed by install_phylowgs.sh)
-phylowgs_dir="${SCRIPT_DIR}/phylowgs"
+# Use the absolute path to the phylowgs directory based on the provided code directory
+phylowgs_dir="${CODE_DIR}/2-phylowgs/phylowgs"
 
 # Check if phylowgs directory exists
 if [ ! -d "$phylowgs_dir" ]; then
@@ -60,6 +64,7 @@ echo "--- PhyloWGS Processing for Bootstrap Sample: $BOOTSTRAP_DIR_NAME ---"
 echo "Job ID: $SLURM_JOB_ID, Array Task ID: $SLURM_ARRAY_TASK_ID"
 echo "Directory: $CURRENT_BOOTSTRAP_DIR_PATH"
 echo "Bootstrap Number: $BOOTSTRAP_NUM"
+echo "Code Directory: $CODE_DIR"
 
 SSM_FILE="${CURRENT_BOOTSTRAP_DIR_PATH}/ssm_data_bootstrap${BOOTSTRAP_NUM}.txt"
 CNV_FILE="${CURRENT_BOOTSTRAP_DIR_PATH}/cnv_data_bootstrap${BOOTSTRAP_NUM}.txt"

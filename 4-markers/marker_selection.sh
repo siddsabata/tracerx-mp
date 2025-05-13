@@ -8,17 +8,18 @@
 set -e
 
 # --- Argument Parsing and Validation ---
-if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then
+if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
     echo "Error: Incorrect number of arguments."
-    echo "Usage: sbatch $0 <patient_id> <aggregation_directory> <ssm_file_path> [read_depth]"
-    echo "Example: sbatch $0 CRUK0001 /path/to/data/CRUK0001/initial/aggregation_results /path/to/data/CRUK0001/ssm.txt 1500"
+    echo "Usage: sbatch $0 <patient_id> <aggregation_directory> <ssm_file_path> <code_directory> [read_depth]"
+    echo "Example: sbatch $0 CRUK0001 /path/to/data/CRUK0001/initial/aggregation_results /path/to/data/CRUK0001/ssm.txt /path/to/tracerx-mp 1500"
     exit 1
 fi
 
 PATIENT_ID=$1
 AGGREGATION_DIR=$2
 SSM_FILE=$3
-READ_DEPTH=${4:-1500} # Default to 1500 if not provided
+CODE_DIR=$4
+READ_DEPTH=${5:-1500} # Default to 1500 if not provided
 
 if [ ! -d "$AGGREGATION_DIR" ]; then
     echo "Error: Aggregation directory '$AGGREGATION_DIR' not found."
@@ -27,6 +28,11 @@ fi
 
 if [ ! -f "$SSM_FILE" ]; then
     echo "Error: SSM file '$SSM_FILE' not found."
+    exit 1
+fi
+
+if [ ! -d "$CODE_DIR" ]; then
+    echo "Error: Code directory '$CODE_DIR' not found."
     exit 1
 fi
 
@@ -52,6 +58,7 @@ echo "Patient ID: ${PATIENT_ID}"
 echo "Aggregation Directory: ${AGGREGATION_DIR}"
 echo "Markers Directory: ${MARKERS_DIR}"
 echo "SSM File: ${SSM_FILE}"
+echo "Code Directory: ${CODE_DIR}"
 echo "Read Depth: ${READ_DEPTH}"
 echo "Log Directory: ${LOG_DIR}"
 echo "---------------------------------------"
@@ -67,9 +74,8 @@ fi
 echo "Conda environment activated."
 
 # --- Script Paths and Execution ---
-# Get the directory where this script is located
-SCRIPT_DIR_ABS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MARKER_SCRIPT_PATH="${SCRIPT_DIR_ABS}/run_data.py"
+# Use the absolute path to the run_data.py script based on the provided code directory
+MARKER_SCRIPT_PATH="${CODE_DIR}/4-markers/run_data.py"
 
 if [ ! -f "$MARKER_SCRIPT_PATH" ]; then
     echo "Error: Marker selection Python script not found at $MARKER_SCRIPT_PATH. Exiting."

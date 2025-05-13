@@ -107,6 +107,7 @@ The comma-separated values in columns `a` and `d` represent data from multiple t
 - **Inputs**:
   - SSM file containing mutation data
   - Output directory
+  - Code directory (absolute path to tracerx-mp directory)
   - Number of bootstraps
 - **Outputs**:
   - Multiple bootstrap samples in `{output_dir}/bootstraps/bootstrap1/, bootstrap2/, etc.`
@@ -221,4 +222,38 @@ The environments are automatically activated by the respective shell scripts.
 2. All scripts include detailed logging for debugging
 3. The pipeline uses absolute paths to ensure reliability
 4. Environment files (`environment.yml`) should be updated if dependencies change
-5. Future development will focus on implementing the longitudinal analysis phase 
+5. Future development will focus on implementing the longitudinal analysis phase
+
+### Path Resolution in SLURM Environment
+#### Problem Identified
+When running component scripts through Slurm, the working directory of the job is changed to a temporary directory (e.g., `/var/spool/slurmd/job123456/`), causing relative paths to break. This affects:
+- Finding Python scripts from shell scripts
+- Loading configuration files
+- Writing output to the correct location
+
+#### Solution Implemented
+1. **Required Parameter Addition**: Component scripts now accept an explicit code directory parameter. For example:
+   ```bash
+   sbatch 1-bootstrap/bootstrap.sh <input_file> <output_dir> <code_dir> [other_params]
+   ```
+
+2. **Absolute Path Construction**: Inside each component script, absolute paths are constructed using the provided code directory:
+   ```bash
+   BOOTSTRAP_PY_PATH="${CODE_DIR}/1-bootstrap/bootstrap.py"
+   ```
+
+3. **Robust Path Verification**: Scripts now explicitly verify file existence before attempting execution.
+
+#### Required Updates
+To implement this fix across the pipeline:
+
+1. **Component Scripts**: All stage scripts (phylowgs.sh, aggregation.sh, marker_selection.sh) need to be updated to:
+   - Accept a code directory parameter
+   - Use absolute paths to reference Python scripts and other dependencies
+   - Add explicit file existence checks
+
+2. **Main Orchestration Script**: The main_init.sh script needs to be updated to:
+   - Pass its own directory as the code directory to all component scripts
+   - Modify the submit_job function to handle the additional parameter
+
+This ensures the pipeline works reliably regardless of Slurm's job directory behavior. 

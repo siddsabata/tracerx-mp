@@ -14,7 +14,7 @@
 **Goal**: Successfully run the initial pipeline with the small dataset on Guorbi free tier
 
 **Debugging Tasks**:
-- [ ] Verify all conda environments can be properly activated
+- [x] Verify all conda environments can be properly activated
   - Check each environment.yml file in the component directories
   - Ensure conda is properly set up on the Guorbi platform
   
@@ -30,6 +30,20 @@
   
   # And so on for each stage
   ```
+
+- [x] Fix path resolution issues in component scripts
+  - **Problem**: Scripts were failing due to SLURM changing the working directory, causing relative paths to break
+  - **Solution**: Modified bootstrap.sh to accept a code directory parameter to explicitly locate script files
+  - **Application pattern**: 
+    ```bash
+    # Updated usage pattern:
+    sbatch script.sh <input_data> <output_dir> <code_dir> [other_params]
+    
+    # Example:
+    sbatch 1-bootstrap/bootstrap.sh data/ssm_subset.txt ~/patient_data/subset_test/ /absolute/path/to/tracerx-mp
+    ```
+  - **TODO**: Apply this fix to the other stage scripts (phylowgs.sh, aggregation.sh, marker_selection.sh)
+  - **TODO**: Update main_init.sh to pass the code directory parameter to all component scripts
 
 - [ ] Modify resource requirements if needed:
   - Review `#SBATCH` directives in each stage's shell script

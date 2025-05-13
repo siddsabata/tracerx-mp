@@ -8,19 +8,25 @@
 set -e
 
 # --- Argument Parsing and Validation ---
-if [ "$#" -ne 2 ]; then
+if [ "$#" -ne 3 ]; then
     echo "Error: Incorrect number of arguments."
-    echo "Usage: sbatch $0 <patient_id> <bootstrap_parent_directory>"
-    echo "Example: sbatch $0 CRUK0001 /path/to/data/CRUK0001/initial/"
+    echo "Usage: sbatch $0 <patient_id> <bootstrap_parent_directory> <code_directory>"
+    echo "Example: sbatch $0 CRUK0001 /path/to/data/CRUK0001/initial/ /path/to/tracerx-mp"
     exit 1
 fi
 
 PATIENT_ID=$1
 BOOTSTRAP_PARENT_DIR=$2 # This is the directory containing bootstrapN folders
+CODE_DIR=$3
 NUM_BOOTSTRAPS=100        # Hardcoded as per previous request
 
 if [ ! -d "$BOOTSTRAP_PARENT_DIR" ]; then
     echo "Error: Bootstrap parent directory '$BOOTSTRAP_PARENT_DIR' not found."
+    exit 1
+fi
+
+if [ ! -d "$CODE_DIR" ]; then
+    echo "Error: Code directory '$CODE_DIR' not found."
     exit 1
 fi
 
@@ -39,6 +45,7 @@ echo "--- Aggregation Script Execution (output redirected) ---"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Patient ID: ${PATIENT_ID}"
 echo "Bootstrap Parent Directory: ${BOOTSTRAP_PARENT_DIR}"
+echo "Code Directory: ${CODE_DIR}"
 echo "Number of Bootstraps (hardcoded): ${NUM_BOOTSTRAPS}"
 echo "Aggregation results will be placed in: ${BOOTSTRAP_PARENT_DIR}/aggregation_results/"
 echo "---------------------------------------"
@@ -53,9 +60,8 @@ fi
 echo "Conda environment activated."
 
 # --- Script Paths and Execution ---
-# Get the directory where this script is located
-SCRIPT_DIR_ABS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROCESS_SCRIPT_PATH="${SCRIPT_DIR_ABS}/aggregate.py"
+# Use the absolute path to the aggregation.py script based on the provided code directory
+PROCESS_SCRIPT_PATH="${CODE_DIR}/3-aggregation/aggregate.py"
 
 if [ ! -f "$PROCESS_SCRIPT_PATH" ]; then
     echo "Error: Aggregation Python script not found at $PROCESS_SCRIPT_PATH. Exiting."
