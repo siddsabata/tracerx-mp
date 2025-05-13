@@ -33,17 +33,24 @@
 
 - [x] Fix path resolution issues in component scripts
   - **Problem**: Scripts were failing due to SLURM changing the working directory, causing relative paths to break
-  - **Solution**: Modified bootstrap.sh to accept a code directory parameter to explicitly locate script files
-  - **Application pattern**: 
+  - **Solution**: Modified all component scripts to convert relative paths to absolute paths:
+    - bootstrap.sh - Updated to convert INPUT_SSM_FILE to absolute path
+    - phylowgs.sh - Updated to convert BASE_DIR and CODE_DIR to absolute paths
+    - aggregation.sh - Updated to convert BOOTSTRAP_PARENT_DIR and CODE_DIR to absolute paths
+    - marker_selection.sh - Updated to convert AGGREGATION_DIR, SSM_FILE, and CODE_DIR to absolute paths
+  - Each script now includes logic to:
     ```bash
-    # Updated usage pattern:
-    sbatch script.sh <input_data> <output_dir> <code_dir> [other_params]
-    
-    # Example:
-    sbatch 1-bootstrap/bootstrap.sh data/ssm_subset.txt ~/patient_data/subset_test/ /absolute/path/to/tracerx-mp
+    # Convert relative paths to absolute paths if needed
+    if [[ ! "$PATH_VARIABLE" = /* ]]; then
+        PATH_VARIABLE="$(pwd)/$PATH_VARIABLE"
+    fi
     ```
-  - **TODO**: Apply this fix to the other stage scripts (phylowgs.sh, aggregation.sh, marker_selection.sh)
-  - **TODO**: Update main_init.sh to pass the code directory parameter to all component scripts
+  - **Important Path Detection Note**: 
+    - The scripts detect absolute paths by checking if they start with a forward slash `/`
+    - This works on Unix/Linux/MacOS where absolute paths always begin with `/`
+    - This implementation is specific to Unix-like systems (such as the Guorbi HPC)
+    - If the pipeline needs to run on Windows in the future, this detection would need to be modified to handle Windows-style paths (e.g., `C:\path\to\file`)
+  - This ensures scripts work correctly regardless of whether the user provides relative or absolute paths
 
 - [ ] Modify resource requirements if needed:
   - Review `#SBATCH` directives in each stage's shell script

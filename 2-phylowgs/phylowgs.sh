@@ -16,6 +16,19 @@ fi
 BASE_DIR=$1
 CODE_DIR=$2
 
+# Convert relative paths to absolute paths if needed
+if [[ ! "$BASE_DIR" = /* ]]; then
+    # If the path doesn't start with /, it's a relative path
+    BASE_DIR="$(pwd)/$BASE_DIR"
+    echo "Converted base directory path to absolute: $BASE_DIR"
+fi
+
+if [[ ! "$CODE_DIR" = /* ]]; then
+    # If the path doesn't start with /, it's a relative path
+    CODE_DIR="$(pwd)/$CODE_DIR"
+    echo "Converted code directory path to absolute: $CODE_DIR"
+fi
+
 if [ ! -d "$BASE_DIR" ]; then
     echo "Error: Base directory '$BASE_DIR' not found." >&2
     exit 1
@@ -66,8 +79,8 @@ echo "Directory: $CURRENT_BOOTSTRAP_DIR_PATH"
 echo "Bootstrap Number: $BOOTSTRAP_NUM"
 echo "Code Directory: $CODE_DIR"
 
-SSM_FILE="${CURRENT_BOOTSTRAP_DIR_PATH}/ssm_data_bootstrap${BOOTSTRAP_NUM}.txt"
-CNV_FILE="${CURRENT_BOOTSTRAP_DIR_PATH}/cnv_data_bootstrap${BOOTSTRAP_NUM}.txt"
+SSM_FILE="${CURRENT_BOOTSTRAP_DIR_PATH}/ssm.txt"
+CNV_FILE="${CURRENT_BOOTSTRAP_DIR_PATH}/cnv.txt"
 CHAINS_DIR="${CURRENT_BOOTSTRAP_DIR_PATH}/chains"
 
 if [ ! -f "$SSM_FILE" ]; then

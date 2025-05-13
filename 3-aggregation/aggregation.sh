@@ -20,6 +20,19 @@ BOOTSTRAP_PARENT_DIR=$2 # This is the directory containing bootstrapN folders
 CODE_DIR=$3
 NUM_BOOTSTRAPS=100        # Hardcoded as per previous request
 
+# Convert relative paths to absolute paths if needed
+if [[ ! "$BOOTSTRAP_PARENT_DIR" = /* ]]; then
+    # If the path doesn't start with /, it's a relative path
+    BOOTSTRAP_PARENT_DIR="$(pwd)/$BOOTSTRAP_PARENT_DIR"
+    echo "Converted bootstrap parent directory path to absolute: $BOOTSTRAP_PARENT_DIR"
+fi
+
+if [[ ! "$CODE_DIR" = /* ]]; then
+    # If the path doesn't start with /, it's a relative path
+    CODE_DIR="$(pwd)/$CODE_DIR"
+    echo "Converted code directory path to absolute: $CODE_DIR"
+fi
+
 if [ ! -d "$BOOTSTRAP_PARENT_DIR" ]; then
     echo "Error: Bootstrap parent directory '$BOOTSTRAP_PARENT_DIR' not found."
     exit 1

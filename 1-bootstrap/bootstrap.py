@@ -112,7 +112,7 @@ def write_bootstrapped_ssm_file(mutations_for_this_bootstrap_iter, bootstrap_ite
     bootstrap_sub_dir = Path(output_dir) / f'bootstrap{bootstrap_iteration_num}'
     os.makedirs(bootstrap_sub_dir, exist_ok=True)
     
-    ssm_file_path = bootstrap_sub_dir / f'ssm_data_bootstrap{bootstrap_iteration_num}.txt'
+    ssm_file_path = bootstrap_sub_dir / 'ssm.txt'
     
     df_bootstrapped_ssm = pd.DataFrame(mutations_for_this_bootstrap_iter)
     # Ensure correct SSM column order
@@ -124,7 +124,7 @@ def write_bootstrapped_ssm_file(mutations_for_this_bootstrap_iter, bootstrap_ite
     df_bootstrapped_ssm.to_csv(ssm_file_path, sep='\t', index=False)
     
     # Create empty CNV file (required by PhyloWGS)
-    cnv_file_path = bootstrap_sub_dir / f'cnv_data_bootstrap{bootstrap_iteration_num}.txt'
+    cnv_file_path = bootstrap_sub_dir / 'cnv.txt'
     cnv_file_path.touch()
 
 def process_and_bootstrap_ssm(input_ssm_df, num_bootstraps, output_dir):
