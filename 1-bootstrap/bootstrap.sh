@@ -48,9 +48,11 @@ echo "Conda environment preprocess_env activated successfully."
 
 # --- Run Bootstrap Script ---
 echo "Running bootstrap.py..."
-# Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-python3 "${SCRIPT_DIR}/bootstrap.py" \
+# Find the absolute path to the bootstrap script directory
+SCRIPT_PATH=$(readlink -f $(dirname "$0"))
+echo "Script directory resolved as: $SCRIPT_PATH"
+
+python3 "$SCRIPT_PATH/bootstrap.py" \
     -i "$INPUT_SSM_FILE" \
     -o "$BOOTSTRAP_DATA_DIR" \
     -n "$NUM_BOOTSTRAPS"

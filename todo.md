@@ -8,12 +8,7 @@
 **Tasks**:
 - [x] Extract 5 mutations from each node of known tree for CRUK0044 from `data/ssm.txt` 
 - [x] Save as `data/ssm_subset.txt` 
-- [ ] Validate the subset file format
-
-```bash
-# Command to create a subset with first 5 mutations (header + 5 data rows)
-head -n 6 data/ssm.txt > data/ssm_small.txt
-```
+- [x] Validate the subset file format
 
 ### 2. Get Main_Init.sh Working Through Non-Longitudinal Stage
 **Goal**: Successfully run the initial pipeline with the small dataset on Guorbi free tier
