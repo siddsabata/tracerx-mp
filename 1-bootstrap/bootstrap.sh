@@ -39,13 +39,6 @@ echo "Output Base Directory: $OUTPUT_BASE_DIR"
 echo "Code Directory: $CODE_DIR"
 echo "Number of Bootstraps: $NUM_BOOTSTRAPS"
 
-# Convert relative paths to absolute paths if needed
-if [[ ! "$INPUT_SSM_FILE" = /* ]]; then
-    # If the path doesn't start with /, it's a relative path
-    INPUT_SSM_FILE="$(pwd)/$INPUT_SSM_FILE"
-    echo "Converted input file path to absolute: $INPUT_SSM_FILE"
-fi
-
 # Verify the input file exists
 if [ ! -f "$INPUT_SSM_FILE" ]; then
     echo "Error: Input SSM file not found at $INPUT_SSM_FILE"

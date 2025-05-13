@@ -16,19 +16,6 @@ fi
 BASE_DIR=$1
 CODE_DIR=$2
 
-# Convert relative paths to absolute paths if needed
-if [[ ! "$BASE_DIR" = /* ]]; then
-    # If the path doesn't start with /, it's a relative path
-    BASE_DIR="$(pwd)/$BASE_DIR"
-    echo "Converted base directory path to absolute: $BASE_DIR"
-fi
-
-if [[ ! "$CODE_DIR" = /* ]]; then
-    # If the path doesn't start with /, it's a relative path
-    CODE_DIR="$(pwd)/$CODE_DIR"
-    echo "Converted code directory path to absolute: $CODE_DIR"
-fi
-
 if [ ! -d "$BASE_DIR" ]; then
     echo "Error: Base directory '$BASE_DIR' not found." >&2
     exit 1

@@ -19,6 +19,23 @@ PATIENT_BASE_DIR=$3
 NUM_BOOTSTRAPS=${4:-100}  # Default to 100 if not provided
 READ_DEPTH=${5:-1500}     # Default to 1500 if not provided
 
+# --- Get script directory for absolute paths ---
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+echo "Using code directory: ${SCRIPT_DIR}"
+
+# --- Convert all paths to absolute paths upfront ---
+# For INPUT_SSM_FILE
+if [[ ! "$INPUT_SSM_FILE" = /* ]]; then
+    INPUT_SSM_FILE="${SCRIPT_DIR}/${INPUT_SSM_FILE}"
+    echo "Converted input SSM file path to absolute: ${INPUT_SSM_FILE}"
+fi
+
+# For PATIENT_BASE_DIR
+if [[ ! "$PATIENT_BASE_DIR" = /* ]]; then
+    PATIENT_BASE_DIR="${SCRIPT_DIR}/${PATIENT_BASE_DIR}"
+    echo "Converted patient base directory path to absolute: ${PATIENT_BASE_DIR}"
+fi
+
 # --- Normalize PATIENT_BASE_DIR (remove trailing slashes) ---
 PATIENT_BASE_DIR=$(echo "${PATIENT_BASE_DIR}" | sed 's:/*$::')
 
@@ -27,10 +44,6 @@ if [ ! -f "$INPUT_SSM_FILE" ]; then
     echo "Error: Input SSM file not found: $INPUT_SSM_FILE"
     exit 1
 fi
-
-# --- Get script directory for absolute paths ---
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-echo "Using code directory: ${SCRIPT_DIR}"
 
 # --- Define Initial Directory Structure ---
 # Create an 'initial' subdirectory for all processing

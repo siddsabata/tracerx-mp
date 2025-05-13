@@ -33,24 +33,16 @@
 
 - [x] Fix path resolution issues in component scripts
   - **Problem**: Scripts were failing due to SLURM changing the working directory, causing relative paths to break
-  - **Solution**: Modified all component scripts to convert relative paths to absolute paths:
-    - bootstrap.sh - Updated to convert INPUT_SSM_FILE to absolute path
-    - phylowgs.sh - Updated to convert BASE_DIR and CODE_DIR to absolute paths
-    - aggregation.sh - Updated to convert BOOTSTRAP_PARENT_DIR and CODE_DIR to absolute paths
-    - marker_selection.sh - Updated to convert AGGREGATION_DIR, SSM_FILE, and CODE_DIR to absolute paths
-  - Each script now includes logic to:
-    ```bash
-    # Convert relative paths to absolute paths if needed
-    if [[ ! "$PATH_VARIABLE" = /* ]]; then
-        PATH_VARIABLE="$(pwd)/$PATH_VARIABLE"
-    fi
-    ```
-  - **Important Path Detection Note**: 
+  - **Initial Solution**: Modified component scripts to convert relative paths to absolute paths
+  - **Improved Solution**: Moved all path conversion to the main script (main_init.sh):
+    - All input paths are now converted to absolute at the beginning of main_init.sh
+    - Path conversion logic was removed from all component scripts (bootstrap.sh, phylowgs.sh, etc.)
+    - This prevents issues when component scripts try to convert paths based on their own working directory
+  - **Path Detection Method**: 
     - The scripts detect absolute paths by checking if they start with a forward slash `/`
     - This works on Unix/Linux/MacOS where absolute paths always begin with `/`
     - This implementation is specific to Unix-like systems (such as the Guorbi HPC)
     - If the pipeline needs to run on Windows in the future, this detection would need to be modified to handle Windows-style paths (e.g., `C:\path\to\file`)
-  - This ensures scripts work correctly regardless of whether the user provides relative or absolute paths
 
 - [ ] Modify resource requirements if needed:
   - Review `#SBATCH` directives in each stage's shell script

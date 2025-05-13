@@ -21,25 +21,6 @@ SSM_FILE=$3
 CODE_DIR=$4
 READ_DEPTH=${5:-1500} # Default to 1500 if not provided
 
-# Convert relative paths to absolute paths if needed
-if [[ ! "$AGGREGATION_DIR" = /* ]]; then
-    # If the path doesn't start with /, it's a relative path
-    AGGREGATION_DIR="$(pwd)/$AGGREGATION_DIR"
-    echo "Converted aggregation directory path to absolute: $AGGREGATION_DIR"
-fi
-
-if [[ ! "$SSM_FILE" = /* ]]; then
-    # If the path doesn't start with /, it's a relative path
-    SSM_FILE="$(pwd)/$SSM_FILE"
-    echo "Converted SSM file path to absolute: $SSM_FILE"
-fi
-
-if [[ ! "$CODE_DIR" = /* ]]; then
-    # If the path doesn't start with /, it's a relative path
-    CODE_DIR="$(pwd)/$CODE_DIR"
-    echo "Converted code directory path to absolute: $CODE_DIR"
-fi
-
 if [ ! -d "$AGGREGATION_DIR" ]; then
     echo "Error: Aggregation directory '$AGGREGATION_DIR' not found."
     exit 1
