@@ -36,11 +36,11 @@
     - Updated marker_selection.sh to load the Gurobi module and verify it's accessible from Python
     - Added verification steps to ensure compatibility between the Python interface and the system Gurobi
     - Still encountering issues with Gurobi licensing - need to troubleshoot further
-    - Potential next steps:
-      - Check if gurobipy version matches the module version
-      - Verify license file location and permissions
-      - Try running a simple Gurobi test script to isolate the issue
-      - Consider using the simplified optimization function as a workaround
+    - next steps:
+      - correctly install the gurobipy python interface that matches with the gurobi 9.0.2 module on 
+      the cluster 
+      - ensure all other packages are supported in the markers_env python environment defined in 
+      `4-markers/environment.yml` 
 
 - [x] Fix path resolution issues in component scripts
   - **Problem**: Scripts were failing due to SLURM changing the working directory, causing relative paths to break

@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.11
+  - python=3.9
   - numpy
   - pandas
   - scipy
@@ -15,5 +15,3 @@ dependencies:
   - python-graphviz
   - ete3
   - lxml  # required by ete3
-  - pip:
-    - gurobipy==9.0.2  # Install gurobipy interface only, not the full Gurobi
