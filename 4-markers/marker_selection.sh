@@ -8,7 +8,13 @@
 set -e
 
 # load gurobi
+echo "Loading Gurobi 9.0.2 module..."
 module load gurobi902
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to load gurobi902 module. Exiting."
+    exit 1
+fi
+echo "Gurobi module loaded successfully."
 
 # --- Argument Parsing and Validation ---
 if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
@@ -75,6 +81,15 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 echo "Conda environment activated."
+
+# Verify Gurobi is accessible from Python
+echo "Verifying Gurobi is accessible from Python..."
+python -c "import gurobipy; print(f'Gurobi version: {gurobipy.gurobi.version()}')"
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to import gurobipy or access Gurobi. Check that the module is properly loaded and gurobipy is installed."
+    exit 1
+fi
+echo "Gurobi verification successful."
 
 # --- Script Paths and Execution ---
 # Use the absolute path to the run_data.py script based on the provided code directory
