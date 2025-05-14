@@ -30,6 +30,17 @@
   
   # And so on for each stage
   ```
+  - [ ] Ongoing Gurobi licensing issues:
+    - Identified that the cluster has Gurobi 9.0.2 available via module system (`module load gurobi902`)
+    - Modified the markers_env conda environment to only install the gurobipy Python interface
+    - Updated marker_selection.sh to load the Gurobi module and verify it's accessible from Python
+    - Added verification steps to ensure compatibility between the Python interface and the system Gurobi
+    - Still encountering issues with Gurobi licensing - need to troubleshoot further
+    - Potential next steps:
+      - Check if gurobipy version matches the module version
+      - Verify license file location and permissions
+      - Try running a simple Gurobi test script to isolate the issue
+      - Consider using the simplified optimization function as a workaround
 
 - [x] Fix path resolution issues in component scripts
   - **Problem**: Scripts were failing due to SLURM changing the working directory, causing relative paths to break

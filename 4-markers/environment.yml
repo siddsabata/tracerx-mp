@@ -16,4 +16,4 @@ dependencies:
   - ete3
   - lxml  # required by ete3
   - pip:
-    - gurobipy  # Install gurobipy interface only, not the full Gurobi
+    - gurobipy==9.0.2  # Install gurobipy interface only, not the full Gurobi
