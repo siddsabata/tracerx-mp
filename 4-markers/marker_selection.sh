@@ -7,6 +7,9 @@
 
 set -e
 
+# load gurobi
+module load gurobi902
+
 # --- Argument Parsing and Validation ---
 if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
     echo "Error: Incorrect number of arguments."
