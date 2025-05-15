@@ -4,7 +4,7 @@ channels:
   - defaults
   - gurobi
 dependencies:
-  - python=3.6
+  - python=3.11
   - numpy
   - pandas
   - scipy
@@ -16,4 +16,4 @@ dependencies:
   - python-graphviz
   - ete3
   - lxml  # required by ete3
-  - gurobi=9.0.2
+  - gurobi=11.0.2

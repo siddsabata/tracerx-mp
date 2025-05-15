@@ -8,10 +8,10 @@
 set -e
 
 # load gurobi
-echo "Loading Gurobi 9.0.2 module..."
-module load gurobi902
+echo "Loading Gurobi 11.0.2 module..."
+module load gurobi1102
 if [ $? -ne 0 ]; then
-    echo "Error: Failed to load gurobi902 module. Exiting."
+    echo "Error: Failed to load gurobi1102 module. Exiting."
     exit 1
 fi
 echo "Gurobi module loaded successfully."
