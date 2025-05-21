@@ -12,6 +12,30 @@ import seaborn as sns
 import os
 import sys
 
+def parse_gene_info(gene_string):
+    """
+    Parses a gene string (expected format: SYMBOL_CHR_POS_REF>ALT or just SYMBOL)
+    into its components.
+    Returns a dictionary with 'Symbol', 'Chromosome', and 'Start_Position'.
+    Returns 'N/A' for fields that cannot be parsed.
+    """
+    parts = gene_string.split('_')
+    if len(parts) >= 3:  # SYMBOL_CHR_POS...
+        # Check if CHR and POS look like valid numbers, otherwise treat as part of symbol
+        if parts[1].isdigit() and parts[2].isdigit():
+            symbol = parts[0]
+            chromosome = parts[1]
+            position = parts[2]
+            # Potentially more parts for REF>ALT etc.
+            return {'Symbol': symbol, 'Chromosome': chromosome, 'Start_Position': position}
+        else: # CHR or POS is not a simple number, assume it's part of a complex symbol
+            return {'Symbol': gene_string, 'Chromosome': 'N/A', 'Start_Position': 'N/A'}
+    elif len(parts) == 1:  # Just SYMBOL
+        symbol = parts[0]
+        return {'Symbol': symbol, 'Chromosome': 'N/A', 'Start_Position': 'N/A'}
+    else:  # Other unexpected formats or too few parts after split (e.g. "SYMBOL_")
+        return {'Symbol': gene_string, 'Chromosome': 'N/A', 'Start_Position': 'N/A'}
+
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description='Run marker selection analysis.')
@@ -66,6 +90,12 @@ def main():
 
     # Read from ssm.txt file
     ssm_df = pd.read_csv(ssm_file_path, sep='\t')
+
+    # Parse gene information to create Chromosome and Start_Position columns
+    parsed_info_list = ssm_df['gene'].apply(parse_gene_info)
+    # ssm_df['Symbol_parsed'] = [info['Symbol'] for info in parsed_info_list] # If parsed symbol is needed later
+    ssm_df['Chromosome'] = [info['Chromosome'] for info in parsed_info_list]
+    ssm_df['Start_Position'] = [info['Start_Position'] for info in parsed_info_list]
 
     # --- START VAF Calculation and Filtering ---
     def get_vaf_list_for_filtering(row):

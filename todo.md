@@ -30,17 +30,21 @@
   
   # And so on for each stage
   ```
-  - [ ] Ongoing Gurobi licensing issues:
-    - Identified that the cluster has Gurobi 9.0.2 available via module system (`module load gurobi902`)
-    - Modified the markers_env conda environment to only install the gurobipy Python interface
-    - Updated marker_selection.sh to load the Gurobi module and verify it's accessible from Python
-    - Added verification steps to ensure compatibility between the Python interface and the system Gurobi
-    - Still encountering issues with Gurobi licensing - need to troubleshoot further
-    - next steps:
-      - correctly install the gurobipy python interface that matches with the gurobi 9.0.2 module on 
-      the cluster 
-      - ensure all other packages are supported in the markers_env python environment defined in 
-      `4-markers/environment.yml` 
+  - [ ] Ongoing Gurobi licensing issues: Resolve Gurobi Issues
+    - ~~Identified that the cluster has Gurobi 9.0.2 available via module system (`module load gurobi902`)~~
+    - **Update:** System admin confirmed Gurobi module `gurobi1102` (version 11.0.2) is available on compute nodes.
+    - `4-markers/marker_selection.sh` correctly loads `gurobi1102`.
+    - `4-markers/environment.yml` correctly specifies `gurobi=11.0.2` for `gurobipy`.
+    - This configuration should now work.
+    - ~~Modified the markers_env conda environment to only install the gurobipy Python interface~~
+    - ~~Updated marker_selection.sh to load the Gurobi module and verify it's accessible from Python~~
+    - ~~Added verification steps to ensure compatibility between the Python interface and the system Gurobi~~
+    - ~~Still encountering issues with Gurobi licensing - need to troubleshoot further~~
+    - ~~next steps:~~
+      - ~~correctly install the gurobipy python interface that matches with the gurobi 9.0.2 module on~~ 
+      - ~~the cluster~~ 
+      - ~~ensure all other packages are supported in the markers_env python environment defined in~~ 
+      - ~~`4-markers/environment.yml`~~ 
 
 - [x] Fix path resolution issues in component scripts
   - **Problem**: Scripts were failing due to SLURM changing the working directory, causing relative paths to break
