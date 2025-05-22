@@ -272,3 +272,4 @@ def analyze_tree_distribution(tree_distribution, directory, patient_num, type, f
             sns.barplot(data=df_prev, x='clone',y='fraction', hue='sample')
             plt.title(str(patient_num) + '_' + str(idx) + '_freq' + str(freq))
             plt.savefig(directory / f'{patient_num}_freq_dist{idx}_{type}.png')
+            plt.close()

@@ -11,7 +11,7 @@ set -e
 if [ "$#" -ne 3 ]; then
     echo "Error: Incorrect number of arguments."
     echo "Usage: sbatch $0 <patient_id> <bootstrap_parent_directory> <code_directory>"
-    echo "Example: sbatch $0 CRUK0001 /path/to/data/CRUK0001/initial/ /path/to/tracerx-mp"
+    echo "Example: sbatch $0 CRUK0001 /path/to/data/initial/bootstraps /path/to/tracerx-mp"
     exit 1
 fi
 

@@ -3,7 +3,7 @@
 # SLURM will use default log files (e.g., slurm-%j.out in submission dir for initial output).
 #SBATCH --partition=pool1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=4G
+#SBATCH --mem=16G
 
 set -e
 
