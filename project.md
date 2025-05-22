@@ -83,6 +83,15 @@ s1  GLIPR1L1_12_75728663_C>A  238,351,385     359,367,406     0.999 0.499
 
 The comma-separated values in columns `a` and `d` represent data from multiple tumor regions of the same patient, which is the foundation for analyzing clonal evolution and selecting optimal genetic markers.
 
+### **Multi-Sample Data Processing**
+The pipeline now includes robust multi-sample support through `convert_ssm_to_dataframe_v2.py`, which:
+- **Automatically detects** the number of samples per mutation (2 to n samples)
+- **Calculates VAFs** for each sample: VAF = (total_depth - ref_count) / total_depth
+- **Applies flexible filtering** strategies to maintain data consistency with tree distributions
+- **Validates compatibility** between filtered mutation sets and pre-computed phylogenetic trees
+
+This ensures that the marker selection algorithms receive properly formatted data that matches the tree distribution expectations.
+
 ## Pipeline Components
 
 ### 1. Master Orchestration (`main_init.sh`)
@@ -152,7 +161,9 @@ The comma-separated values in columns `a` and `d` represent data from multiple t
 - **Purpose**: Selects optimal genetic markers based on aggregated results
 - **Components**:
   - `marker_selection.sh`: Slurm job submission script
-  - `run_data.py`: Data processing implementation
+  - `run_data.py`: Original data processing implementation (legacy)
+  - `run_data_multi_sample.py`: **New multi-sample compatible implementation**
+  - `convert_ssm_to_dataframe_v2.py`: **Multi-sample SSM to DataFrame converter**
   - `run_markers.sh`: Marker selection execution script
   - `optimize_fraction.py`: Fraction optimization implementation
   - `optimize.py`: General optimization utilities
@@ -161,12 +172,23 @@ The comma-separated values in columns `a` and `d` represent data from multiple t
   - Aggregation results directory
   - Original SSM file
   - Read depth
+  - **New**: VAF filtering strategy and parameters
 - **Outputs**:
   - Selected markers in `{patient_base_dir}/initial/markers/`:
     - Marker lists
     - Optimization results
     - Performance metrics
+    - **New**: Multi-sample filtering reports
 - **Dependencies**: Python 3.x, conda environment `markers_env` (specified in `environment.yml`)
+
+#### **Multi-Sample SSM Support**
+The marker selection stage now supports variable numbers of samples (2 to n) with flexible VAF filtering strategies:
+- **`any_high`**: Filter if ANY sample VAF ≥ threshold (most restrictive)
+- **`all_high`**: Filter if ALL sample VAFs ≥ threshold (least restrictive)
+- **`majority_high`**: Filter if >50% of sample VAFs ≥ threshold
+- **`specific_samples`**: Filter based on specific sample indices
+
+This resolves data consistency issues between SSM input and tree distribution data.
 
 ## Output Structure
 For each patient, the pipeline creates the following directory structure:
@@ -197,7 +219,18 @@ For each patient, the pipeline creates the following directory structure:
    bash main_init.sh CRUK0044 data/ssm.txt /home/user/patient_data/CRUK0044/ 100 1500
    ```
 
-3. Monitor progress:
+3. **Alternative: Run marker selection with multi-sample support directly:**
+   ```bash
+   cd 4-markers
+   python run_data_multi_sample.py CRUK0044 \
+     --ssm-file ../data/ssm.txt \
+     --aggregation-dir /path/to/aggregation_results \
+     --filter-strategy any_high \
+     --filter-threshold 0.9 \
+     --read-depth 1500
+   ```
+
+4. Monitor progress:
    ```bash
    squeue -u $USER  # Check job status
    ```
@@ -222,7 +255,9 @@ The environments are automatically activated by the respective shell scripts.
 2. All scripts include detailed logging for debugging
 3. The pipeline uses absolute paths to ensure reliability
 4. Environment files (`environment.yml`) should be updated if dependencies change
-5. Future development will focus on implementing the longitudinal analysis phase
+5. **Multi-sample support**: Use `run_data_multi_sample.py` for new analyses; `run_data.py` is maintained for legacy compatibility
+6. **Data consistency**: The new multi-sample converter ensures filtered mutation sets match tree distribution expectations
+7. Future development will focus on implementing the longitudinal analysis phase
 
 ### Path Resolution in SLURM Environment
 #### Problem Identified

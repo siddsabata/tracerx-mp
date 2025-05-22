@@ -1,5 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=marker_selection
+#
+# Multi-sample marker selection SLURM script
+# Uses run_data_multi_sample.py with flexible VAF filtering strategies
+#
+#SBATCH --job-name=marker_selection_multi
 # SLURM will use default log files (e.g., slurm-%j.out in submission dir for initial output).
 #SBATCH --partition=pool1
 #SBATCH --cpus-per-task=1
@@ -17,10 +21,11 @@ fi
 echo "Gurobi module loaded successfully."
 
 # --- Argument Parsing and Validation ---
-if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
+if [ "$#" -lt 4 ] || [ "$#" -gt 8 ]; then
     echo "Error: Incorrect number of arguments."
-    echo "Usage: sbatch $0 <patient_id> <aggregation_directory> <ssm_file_path> <code_directory> [read_depth]"
-    echo "Example: sbatch $0 CRUK0001 /path/to/data/CRUK0001/initial/aggregation_results /path/to/data/CRUK0001/ssm.txt /path/to/tracerx-mp 1500"
+    echo "Usage: sbatch $0 <patient_id> <aggregation_directory> <ssm_file_path> <code_directory> [read_depth] [filter_strategy] [filter_threshold] [filter_samples]"
+    echo "Example: sbatch $0 CRUK0001 /path/to/data/CRUK0001/initial/aggregation_results /path/to/data/CRUK0001/ssm.txt /path/to/tracerx-mp 1500 any_high 0.9"
+    echo "Filter strategies: any_high, all_high, majority_high, specific_samples"
     exit 1
 fi
 
@@ -29,6 +34,9 @@ AGGREGATION_DIR=$2
 SSM_FILE=$3
 CODE_DIR=$4
 READ_DEPTH=${5:-1500} # Default to 1500 if not provided
+FILTER_STRATEGY=${6:-any_high} # Default to any_high if not provided
+FILTER_THRESHOLD=${7:-0.9} # Default to 0.9 if not provided
+FILTER_SAMPLES=${8:-""} # Optional specific samples for specific_samples strategy
 
 if [ ! -d "$AGGREGATION_DIR" ]; then
     echo "Error: Aggregation directory '$AGGREGATION_DIR' not found."
@@ -69,6 +77,9 @@ echo "Markers Directory: ${MARKERS_DIR}"
 echo "SSM File: ${SSM_FILE}"
 echo "Code Directory: ${CODE_DIR}"
 echo "Read Depth: ${READ_DEPTH}"
+echo "Filter Strategy: ${FILTER_STRATEGY}"
+echo "Filter Threshold: ${FILTER_THRESHOLD}"
+echo "Filter Samples: ${FILTER_SAMPLES}"
 echo "Log Directory: ${LOG_DIR}"
 echo "---------------------------------------"
 
@@ -92,20 +103,32 @@ fi
 echo "Gurobi verification successful."
 
 # --- Script Paths and Execution ---
-# Use the absolute path to the run_data.py script based on the provided code directory
-MARKER_SCRIPT_PATH="${CODE_DIR}/4-markers/run_data.py"
+# Use the absolute path to the run_data_multi_sample.py script based on the provided code directory
+MARKER_SCRIPT_PATH="${CODE_DIR}/4-markers/run_data_multi_sample.py"
 
 if [ ! -f "$MARKER_SCRIPT_PATH" ]; then
-    echo "Error: Marker selection Python script not found at $MARKER_SCRIPT_PATH. Exiting."
+    echo "Error: Multi-sample marker selection Python script not found at $MARKER_SCRIPT_PATH. Exiting."
     exit 1
 fi
 
-echo "Running Python marker selection script: $MARKER_SCRIPT_PATH"
-python "$MARKER_SCRIPT_PATH" "${PATIENT_ID}" \
-    --aggregation-dir "${AGGREGATION_DIR}" \
-    --ssm-file "${SSM_FILE}" \
-    --read-depth "${READ_DEPTH}" \
-    --output-dir "${MARKERS_DIR}"
+echo "Running multi-sample Python marker selection script: $MARKER_SCRIPT_PATH"
+
+# Build the command with required arguments
+CMD="python \"$MARKER_SCRIPT_PATH\" \"${PATIENT_ID}\" \
+    --aggregation-dir \"${AGGREGATION_DIR}\" \
+    --ssm-file \"${SSM_FILE}\" \
+    --read-depth \"${READ_DEPTH}\" \
+    --output-dir \"${MARKERS_DIR}\" \
+    --filter-strategy \"${FILTER_STRATEGY}\" \
+    --filter-threshold \"${FILTER_THRESHOLD}\""
+
+# Add filter samples if specified (for specific_samples strategy)
+if [ -n "$FILTER_SAMPLES" ]; then
+    CMD="$CMD --filter-samples $FILTER_SAMPLES"
+fi
+
+echo "Executing command: $CMD"
+eval $CMD
 
 SCRIPT_EXIT_CODE=$?
 if [ $SCRIPT_EXIT_CODE -eq 0 ]; then
