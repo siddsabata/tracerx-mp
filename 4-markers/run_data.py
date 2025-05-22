@@ -154,11 +154,17 @@ def main():
     # A simple way: keep if list is not empty AND all vafs are < 0.9.
     
     def should_keep_mutation(vaf_list):
-        if not vaf_list: # If list is empty (e.g., parsing error, or no samples)
-            return False # Discard mutation if no valid VAFs were found
-        return all(vaf < 0.9 for vaf in vaf_list)
+        if not vaf_list: # If list is empty (e.g., parsing error, or no samples where VAFs could be computed)
+            return True   # Keep the mutation (conservative approach, don't filter if VAFs are unknown/unparseable)
+        return all(vaf < 0.9 for vaf in vaf_list) # Filter if any VAF is >= 0.9
 
     ssm_df = ssm_df[ssm_df['vaf_list_for_filter'].apply(should_keep_mutation)]
+    
+    # Debugging: Print out the filtered ssm_df to check formatting and contents
+    print("\n[DEBUG] Filtered ssm_df (first 10 rows):")
+    print(ssm_df.head(10))
+    print("\n[DEBUG] ssm_df columns:", list(ssm_df.columns))
+    print(f"[DEBUG] Number of mutations after filtering: {len(ssm_df)}\n")
     
     # Old filter lines:
     # ssm_df = ssm_df[ssm_df["VAF_filter_s1"] < 0.9]

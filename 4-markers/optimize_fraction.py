@@ -236,6 +236,20 @@ def optimize_fraction_weighted_overall(E_list, M_list, F_hat_list, tree_freq_lis
     model.setObjective(gp.quicksum(obj_list[i] * tree_freq_list[i] for i in range(n_trees)), gp.GRB.MAXIMIZE)
     model.update()
     model.optimize()
+
+    # Error handling for Gurobi status
+    if model.Status != gp.GRB.OPTIMAL:
+        print(f"[Gurobi] Model did not solve to optimality. Status code: {model.Status}")
+        if model.Status == gp.GRB.INFEASIBLE:
+            print("[Gurobi] Model is infeasible. Writing model to 'infeasible_model.lp' for debugging.")
+            model.write("infeasible_model.lp")
+        elif model.Status == gp.GRB.UNBOUNDED:
+            print("[Gurobi] Model is unbounded.")
+        else:
+            print("[Gurobi] Optimization was stopped with status:", model.Status)
+        # Return arrays of np.nan to prevent downstream .X errors
+        return np.full(n_genes, np.nan), np.full(n_trees, np.nan)
+
     return return_value_1d(z), return_value_1d(obj_list)
 
 def calculate_markers_fractions_weighted_overall(gene_list, n_markers, tree_list, node_list, clonal_freq_list_new_gt, gene2idx, tree_freq_list, subset_list=None):

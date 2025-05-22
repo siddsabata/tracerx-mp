@@ -30,7 +30,7 @@
   
   # And so on for each stage
   ```
-  - [ ] Ongoing Gurobi licensing issues: Resolve Gurobi Issues
+  - [x] Gurobi licensing issues: Resolve Gurobi Issues
     - ~~Identified that the cluster has Gurobi 9.0.2 available via module system (`module load gurobi902`)~~
     - **Update:** System admin confirmed Gurobi module `gurobi1102` (version 11.0.2) is available on compute nodes.
     - `4-markers/marker_selection.sh` correctly loads `gurobi1102`.
