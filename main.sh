@@ -192,26 +192,34 @@ if [ ! -f "${CODE_DIR}/2-phylowgs/phylowgs.sh" ]; then
     exit 1
 fi
 
+# Build sbatch command for PhyloWGS array job
+PHYLOWGS_SBATCH_CMD=(
+    sbatch --parsable
+    --job-name="${PATIENT_ID}_phylowgs"
+    --output="${LOGS_DIR}/slurm_phylowgs_%A_%a.out"
+    --error="${LOGS_DIR}/slurm_phylowgs_%A_%a.err"
+    --array="0-${PHYLOWGS_ARRAY_MAX}%10"
+)
+
 # Add dependency if specified
-DEPENDENCY_FLAG=""
 if [ -n "$BOOTSTRAP_JOB_ID" ]; then
-    DEPENDENCY_FLAG="--dependency=afterok:$BOOTSTRAP_JOB_ID"
+    PHYLOWGS_SBATCH_CMD+=(--dependency="afterok:$BOOTSTRAP_JOB_ID")
     echo "Dependency: afterok:$BOOTSTRAP_JOB_ID" | tee -a "$MASTER_LOG"
 fi
 
-# Submit PhyloWGS array job with dynamic array size
-PHYLOWGS_JOB_OUTPUT=$(sbatch --parsable \
-    --job-name="${PATIENT_ID}_phylowgs" \
-    --output="${LOGS_DIR}/slurm_phylowgs_%A_%a.out" \
-    --error="${LOGS_DIR}/slurm_phylowgs_%A_%a.err" \
-    --array="0-${PHYLOWGS_ARRAY_MAX}%10" \
-    $DEPENDENCY_FLAG \
-    "${CODE_DIR}/2-phylowgs/phylowgs.sh" \
-    "$BOOTSTRAPS_DIR" "$CODE_DIR" 2>&1)
+# Add script and arguments
+PHYLOWGS_SBATCH_CMD+=("${CODE_DIR}/2-phylowgs/phylowgs.sh")
+PHYLOWGS_SBATCH_CMD+=("$BOOTSTRAPS_DIR")
+PHYLOWGS_SBATCH_CMD+=("$CODE_DIR")
 
+# Submit PhyloWGS array job
+echo "Executing sbatch command..." | tee -a "$MASTER_LOG"
+PHYLOWGS_JOB_OUTPUT=$("${PHYLOWGS_SBATCH_CMD[@]}" 2>&1)
 PHYLOWGS_SUBMIT_STATUS=$?
+
 if [ $PHYLOWGS_SUBMIT_STATUS -ne 0 ]; then
     echo "Error: Failed to submit phylowgs job" | tee -a "$MASTER_LOG"
+    echo "sbatch exit status: $PHYLOWGS_SUBMIT_STATUS" | tee -a "$MASTER_LOG"
     echo "sbatch output: $PHYLOWGS_JOB_OUTPUT" | tee -a "$MASTER_LOG"
     exit 1
 fi
@@ -220,7 +228,8 @@ PHYLOWGS_JOB_ID="$PHYLOWGS_JOB_OUTPUT"
 
 # Validate job ID is numeric
 if ! [[ "$PHYLOWGS_JOB_ID" =~ ^[0-9]+$ ]]; then
-    echo "Error: Invalid job ID returned: $PHYLOWGS_JOB_ID" | tee -a "$MASTER_LOG"
+    echo "Error: Invalid job ID returned: '$PHYLOWGS_JOB_ID'" | tee -a "$MASTER_LOG"
+    echo "Full sbatch output: '$PHYLOWGS_JOB_OUTPUT'" | tee -a "$MASTER_LOG"
     exit 1
 fi
 
