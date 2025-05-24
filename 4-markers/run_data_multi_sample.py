@@ -103,13 +103,25 @@ def validate_tree_compatibility(gene_list, tree_distribution):
         bool: True if compatible, False otherwise
     """
     try:
-        clonal_freq_list = tree_distribution['vaf_frac']
-        if not clonal_freq_list:
-            print("Warning: No clonal frequency data found in tree distribution")
+        # Get the node dictionaries which contain the mutation assignments
+        node_list = tree_distribution['node_dict']
+        if not node_list:
+            print("Warning: No node dictionary data found in tree distribution")
             return False
-            
-        expected_gene_count = len(clonal_freq_list[0]) if clonal_freq_list else 0
+        
+        # Extract all mutations from the first tree's node dictionary
+        # (all trees should have the same mutations, just different assignments)
+        first_tree_node_dict = node_list[0]
+        tree_mutations = set()
+        
+        for node, mutations in first_tree_node_dict.items():
+            tree_mutations.update(mutations)
+        
+        expected_gene_count = len(tree_mutations)
         actual_gene_count = len(gene_list)
+        
+        # Also check that the gene IDs match
+        gene_set = set(gene_list)
         
         if expected_gene_count != actual_gene_count:
             print(f"ERROR: Gene count mismatch!")
@@ -118,7 +130,19 @@ def validate_tree_compatibility(gene_list, tree_distribution):
             print(f"  This indicates the filtering produced a different mutation set than expected.")
             print(f"  The tree distribution was computed on a different set of mutations.")
             return False
+        
+        # Check if the gene sets match
+        if tree_mutations != gene_set:
+            missing_in_tree = gene_set - tree_mutations
+            missing_in_genes = tree_mutations - gene_set
+            print(f"ERROR: Gene set mismatch!")
+            if missing_in_tree:
+                print(f"  Genes in filtered data but not in tree: {sorted(missing_in_tree)}")
+            if missing_in_genes:
+                print(f"  Genes in tree but not in filtered data: {sorted(missing_in_genes)}")
+            return False
             
+        print(f"Validation successful: {expected_gene_count} genes match between tree and filtered data")
         return True
         
     except Exception as e:
