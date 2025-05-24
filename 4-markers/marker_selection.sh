@@ -106,6 +106,10 @@ echo "Gurobi verification successful."
 # Use the absolute path to the run_data_multi_sample.py script based on the provided code directory
 MARKER_SCRIPT_PATH="${CODE_DIR}/4-markers/run_data_multi_sample.py"
 
+# Debug: Print the actual script path being used
+echo "DEBUG: Marker script path: $MARKER_SCRIPT_PATH"
+echo "DEBUG: Script exists check: $(ls -la "$MARKER_SCRIPT_PATH" 2>/dev/null || echo "NOT FOUND")"
+
 if [ ! -f "$MARKER_SCRIPT_PATH" ]; then
     echo "Error: Multi-sample marker selection Python script not found at $MARKER_SCRIPT_PATH. Exiting."
     exit 1
