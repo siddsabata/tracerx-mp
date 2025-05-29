@@ -5,20 +5,46 @@ This project implements a computational pipeline for selecting genetic markers f
 
 ## Project Purpose and Roadmap
 
-### Current Implementation (Initial Phase)
-The currently implemented pipeline represents the **initial processing phase** of the TracerX marker selection project. This phase uses multi-region biopsy data to:
-1. Construct phylogenetic trees representing cancer evolution
-2. Identify optimal genetic markers for tracking cancer progression
-3. Select markers suitable for monitoring via droplet digital PCR (ddPCR) blood samples
+### Current Implementation (Initial Phase) ✅ COMPLETED
+The currently implemented pipeline represents the **initial processing phase** of the TracerX marker selection project. This phase involved getting the complete pipeline working on HPC infrastructure and included:
+
+1. **HPC Infrastructure Setup**: Successfully deploying the pipeline on SLURM-based HPC cluster
+2. **Data Preparation**: Creating test datasets (including 5-mutation subset for rapid testing)
+3. **Multi-Sample Framework**: Implementing robust support for variable numbers of tumor regions
+4. **Pipeline Debugging**: Resolving Gurobi licensing, path resolution, and data consistency issues
+5. **Phylogenetic Tree Construction**: Using bootstrap sampling and PhyloWGS for cancer evolution analysis
+6. **Marker Selection**: Implementing optimization algorithms for genetic marker identification
+
+**Status**: The initial phase is fully functional with robust multi-sample support, flexible VAF filtering, and comprehensive error handling. The pipeline successfully processes somatic mutation data through all four stages: bootstrapping, phylogenetic inference, aggregation, and marker selection.
+
+**Major Achievement**: ✅ **The complete pipeline successfully processes real TRACERx patient data (CRUK0044) with 28 mutations across 3 tumor regions, demonstrating production-ready capability for cancer genomics research.**
+
+### Current Development Phase (Enhancement Phase)
+The current development focus is on **enhancing the existing pipeline** with improved visualization, better multi-sample support throughout all stages, and preparing for longitudinal analysis:
+
+1. **Aggregation Stage Improvements**: 
+   - Dynamic multi-sample support (replacing hardcoded blood/tissue assumptions)
+   - Enhanced visualization combining frequency graphs with phylogenetic trees
+   - Best tree visualization from aggregation results
+   
+2. **Simplified Longitudinal Foundation**: 
+   - Streamlined data formats using familiar tab-separated files
+   - Simplified processing workflows building on the multi-sample framework
+   - Enhanced visualization capabilities for temporal data
+
+3. **Optional Automation Enhancements**:
+   - Streamlined SLURM script management
+   - Template-based script generation
+   - Enhanced pipeline orchestration
 
 ### Future Development (Longitudinal Phase)
-The next phase of development (not yet implemented) will focus on **longitudinal analysis**:
+The next major phase will focus on **longitudinal analysis**:
 1. Use blood sample data collected over time to update the tree distributions
 2. Track clonal fractions over time to monitor cancer progression or treatment response
 3. Converge to an optimal tree with the longitudinal update method
 4. Provide temporal insights into cancer evolution during treatment
 
-This dual-phase approach allows the pipeline to first establish a solid baseline understanding of the cancer's clonal structure from the initial biopsy, then refine this model over time with less-invasive blood samples.
+This multi-phase approach ensures a solid, well-tested foundation before adding complex longitudinal functionality.
 
 ## System Requirements
 - High-Performance Computing (HPC) cluster with Slurm workload manager
@@ -139,12 +165,12 @@ This ensures that the marker selection algorithms receive properly formatted dat
 - **Dependencies**: PhyloWGS software, conda environment specified in `environment.yml`
 
 ### 4. Aggregation Stage (`3-aggregation/`)
-- **Purpose**: Aggregates results from multiple bootstrap runs
+- **Purpose**: Aggregates results from multiple bootstrap runs and creates visualizations
 - **Components**:
   - `aggregation.sh`: Slurm job submission script
   - `aggregate.py`: Main aggregation implementation
-  - `visualize.py`: Visualization utilities
-  - `analyze.py`: Analysis utilities
+  - `visualize.py`: Visualization utilities (**Enhancement Target**)
+  - `analyze.py`: Analysis utilities (**Enhancement Target**)
   - `optimize.py`: Optimization utilities
 - **Inputs**:
   - Patient ID
@@ -154,8 +180,14 @@ This ensures that the marker selection algorithms receive properly formatted dat
     - `{patient}_results_bootstrap_initial_best.json`: Best tree structure
     - `phylowgs_bootstrap_summary.pkl`: Summary of all trees
     - `phylowgs_bootstrap_aggregation.pkl`: Complete aggregation results
-    - Various analysis plots and visualization files
+    - Various analysis plots and visualization files (**Enhancement Target**)
 - **Dependencies**: Python 3.x, conda environment `aggregation_env` (specified in `environment.yml`)
+
+#### **Current Enhancement Priorities**:
+- **Multi-Sample Support**: Replace hardcoded blood/tissue sample assumptions with dynamic n-sample handling
+- **Enhanced Visualization**: Combine frequency graphs with phylogenetic trees for better readability
+- **Best Tree Visualization**: Implement detailed visualization of the best tree from aggregation results
+- **Publication-Quality Plots**: Improve aesthetics and information content of all visualizations
 
 ### 5. Marker Selection Stage (`4-markers/`)
 - **Purpose**: Selects optimal genetic markers based on aggregated results
@@ -292,3 +324,69 @@ To implement this fix across the pipeline:
    - Modify the submit_job function to handle the additional parameter
 
 This ensures the pipeline works reliably regardless of Slurm's job directory behavior. 
+
+## Current Development Priorities
+
+### 1. Aggregation Stage Enhancements (High Priority)
+**Goal**: Improve visualization quality and multi-sample support in the aggregation stage
+
+**Key Tasks**:
+- Analyze and modify aggregation code to handle n samples dynamically
+- Create side-by-side visualizations of frequency graphs and phylogenetic trees
+- Implement best tree visualization from `{patient}_results_bootstrap_initial_best.json`
+- Enhance plot quality and readability for publication use
+
+**Expected Impact**: Better understanding of results, improved publication-ready figures, consistent multi-sample support across the entire pipeline
+
+### 2. Simplified Longitudinal Framework (Medium Priority)
+**Goal**: Establish foundation for longitudinal analysis with streamlined approach
+
+**Key Tasks**:
+- Design simple tab-separated data format for longitudinal blood samples
+- Create `5-longitudinal/` module with core temporal processing capabilities
+- Implement basic clonal fraction tracking over time
+- Integrate with enhanced aggregation visualization
+
+**Expected Impact**: Foundation for temporal cancer evolution analysis with minimal complexity
+
+### 3. Longitudinal Pipeline Orchestration (Medium-Low Priority)
+**Goal**: Create master script for longitudinal workflow automation
+
+**Key Tasks**:
+- Develop `longitudinal_init.sh` script modeled after `main_init.sh`
+- Implement proper job dependencies and directory structure for longitudinal results
+- Add robust error handling and logging for temporal workflows
+- Test with simulated longitudinal datasets
+
+**Expected Impact**: Streamlined execution of longitudinal analysis workflows
+
+### 4. SLURM Script Automation (Lowest Priority - Not Currently Working)
+**Goal**: Streamline pipeline execution and maintenance
+
+**Status**: ⚠️ **Full automation is not currently working and should be deprioritized**
+
+**Key Tasks**:
+- Review and consolidate SLURM scripts across stages
+- Implement template-based script generation
+- Enhance `main_init.sh` with better workflow management
+- Add dynamic resource allocation based on data characteristics
+
+**Expected Impact**: Easier pipeline maintenance, reduced manual configuration, more robust execution
+
+**Note**: This should be considered optional/future work until core functionality is complete
+
+## Testing Strategy
+- **Incremental Development**: Each enhancement builds upon the stable foundation of the initial phase
+- **Backward Compatibility**: All changes maintain compatibility with existing data and workflows
+- **Comprehensive Testing**: Use existing 20-bootstrap test dataset to validate all improvements
+- **Documentation**: Thorough documentation of all new features and configuration options
+
+## Development Timeline (Revised)
+- **Phase 1 (HPC Pipeline Implementation)**: ✅ Completed - 6 days
+- **Phase 2 (Aggregation Enhancements)**: 8-12 days
+- **Phase 3 (Longitudinal Foundation)**: 10-14 days  
+- **Phase 4 (Longitudinal Orchestration)**: 3-5 days
+- **Phase 5 (SLURM Automation)**: 5-7 days (**Not currently working - optional**)
+
+**Total Remaining for Core Functionality**: 21-31 days (phases 2-4)
+**Total if Including Automation**: 26-38 days (all phases, but automation may not be feasible) 
