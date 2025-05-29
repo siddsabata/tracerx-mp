@@ -37,20 +37,24 @@
   - [x] **Successfully tested with CRUK0044 data: processed 80/100 bootstrap replicates, correctly detected 3 samples per tree**
   - [x] Enhanced visualization aesthetics with better color schemes, proper legends, and improved plot layout
 
-- [ ] **Enhanced Visualization**:
-  - Combine frequency graphs with phylogenetic trees in side-by-side layout for better readability
-  - Investigate correlation between frequency graphs and tree structures
-  - Create unified visualization that shows tree structure alongside corresponding frequency data
-  - Improve plot aesthetics and labeling for publication-quality figures
+- [x] **Enhanced Visualization**: ✅ **COMPLETED**
+  - [x] Combine frequency graphs with phylogenetic trees in side-by-side layout for better readability
+  - [x] Investigated correlation between frequency graphs and tree structures
+  - [x] Created unified visualization that shows tree structure alongside corresponding frequency data
+  - [x] Improved plot aesthetics and labeling for publication-quality figures
+  - [x] Enhanced visualization generates combined plots only, with proper cleanup of temporary files
 
-- [ ] **Best Tree Visualization**:
-  - Implement visualization for the best tree from `{patient}_results_bootstrap_initial_best.json`
-  - Create detailed tree plots showing:
-    - Node relationships and clonal structure
-    - Mutation assignments to nodes
-    - Sample-specific frequency information
-    - Confidence intervals or uncertainty measures
-  - Generate both individual best tree plots and comparative visualizations
+- [x] **Best Tree Visualization**: ✅ **COMPLETED**
+  - [x] Implemented enhanced best tree identification and visualization system
+  - [x] Best tree automatically determined by highest bootstrap frequency
+  - [x] Created organized output structure:
+    - Main directory: `{patient}_combined_best_tree_initial.png` (best tree for quick assessment)
+    - Subdirectory: `all_trees_initial/` (all tree visualizations for detailed analysis)
+  - [x] Preserved gene names and mutation information in tree visualizations
+  - [x] Integrated seamlessly with existing aggregation pipeline
+  - [x] Removed redundant code and streamlined implementation
+  - [x] Multi-sample support with dynamic sample detection (2 to n samples)
+  - [x] Publication-quality combined tree + frequency visualizations
 
 - [ ] **Testing and Validation**:
   - Test aggregation improvements with existing test data (20 bootstrap samples)
@@ -157,8 +161,8 @@ For each stage of implementation:
 - **Ticket 1**: ✅ Completed (6 days - included data subset creation and full pipeline debugging)
 - **Ticket 2**: 🔄 **IN PROGRESS** (8-12 days total estimated)
   - ✅ **Multi-sample aggregation support: COMPLETED** (2 days)
-  - [ ] Enhanced visualization: 3-4 days
-  - [ ] Best tree visualization: 2-3 days  
+  - [x] Enhanced visualization: ✅ **COMPLETED** (3-4 days)
+  - [x] Best tree visualization: ✅ **COMPLETED** (2-3 days)  
   - [ ] Testing and validation: 1-2 days
 - **Ticket 3**: 10-14 days (simplified longitudinal functionality)
 - **Ticket 4**: 3-5 days (longitudinal automation script)

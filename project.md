@@ -169,8 +169,8 @@ This ensures that the marker selection algorithms receive properly formatted dat
 - **Components**:
   - `aggregation.sh`: Slurm job submission script
   - `aggregate.py`: Main aggregation implementation
-  - `visualize.py`: Visualization utilities (**Enhancement Target**)
-  - `analyze.py`: Analysis utilities (**Enhancement Target**)
+  - `visualize.py`: Visualization utilities (**Enhanced**)
+  - `analyze.py`: Analysis utilities (**Enhanced**)
   - `optimize.py`: Optimization utilities
 - **Inputs**:
   - Patient ID
@@ -180,14 +180,19 @@ This ensures that the marker selection algorithms receive properly formatted dat
     - `{patient}_results_bootstrap_initial_best.json`: Best tree structure
     - `phylowgs_bootstrap_summary.pkl`: Summary of all trees
     - `phylowgs_bootstrap_aggregation.pkl`: Complete aggregation results
-    - Various analysis plots and visualization files (**Enhancement Target**)
+    - `{patient}_combined_best_tree_initial.png`: **Best tree visualization** (highest bootstrap frequency)
+    - `all_trees_initial/`: **Subdirectory containing all tree visualizations**
+      - `{patient}_combined_tree_freq_{idx}_initial.png`: Combined tree + frequency plots for each unique tree structure
+      - Includes phylogenetic trees with gene names and multi-sample clonal frequency plots
 - **Dependencies**: Python 3.x, conda environment `aggregation_env` (specified in `environment.yml`)
 
-#### **Current Enhancement Priorities**:
-- **Multi-Sample Support**: Replace hardcoded blood/tissue sample assumptions with dynamic n-sample handling
-- **Enhanced Visualization**: Combine frequency graphs with phylogenetic trees for better readability
-- **Best Tree Visualization**: Implement detailed visualization of the best tree from aggregation results
-- **Publication-Quality Plots**: Improve aesthetics and information content of all visualizations
+#### **Enhanced Visualization Features**:
+- **Best Tree Identification**: Automatically identifies and highlights the tree with highest bootstrap frequency
+- **Combined Visualizations**: Side-by-side phylogenetic trees and clonal frequency plots
+- **Multi-Sample Support**: Dynamic handling of 2 to n samples with proper sample detection
+- **Gene Name Preservation**: Full mutation/gene information displayed in tree nodes
+- **Publication-Quality Output**: High-resolution plots with proper legends and formatting
+- **User-Friendly Organization**: Best tree prominently displayed, all trees available for detailed analysis
 
 ### 5. Marker Selection Stage (`4-markers/`)
 - **Purpose**: Selects optimal genetic markers based on aggregated results
