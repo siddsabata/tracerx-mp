@@ -244,7 +244,42 @@ def E2tree(E):
                 tree[i].append(j)
     return tree
 
-def analyze_tree_distribution(tree_distribution, directory, patient_num, type, fig=False):
+def validate_sample_consistency(clonal_freq_data):
+    """
+    Validate that all nodes have consistent sample counts.
+    
+    Args:
+        clonal_freq_data: Dictionary of clonal frequency data
+        
+    Returns:
+        int: Number of samples, or -1 if inconsistent
+    """
+    sample_counts = []
+    for node, freqs in clonal_freq_data.items():
+        for freq_sample in freqs:
+            sample_counts.append(len(freq_sample))
+    
+    if len(set(sample_counts)) > 1:
+        print(f"Warning: Inconsistent sample counts across nodes: {set(sample_counts)}")
+        return -1
+    
+    return sample_counts[0] if sample_counts else 0
+
+
+def analyze_tree_distribution(tree_distribution, directory, patient_num, type, fig=False, 
+                            sample_prefix='Region', custom_sample_names=None):
+    """
+    Analyze tree distribution with multi-sample support.
+    
+    Args:
+        tree_distribution: Tree distribution data from aggregation
+        directory: Output directory for files
+        patient_num: Patient identifier
+        type: Analysis type (e.g., 'initial')
+        fig: Whether to generate figures
+        sample_prefix: Prefix for sample names (default: 'Region')
+        custom_sample_names: Optional list of custom sample names
+    """
     for idx in range(len(tree_distribution['freq'])):
         tree_structure = tree_distribution['tree_structure'][idx]
         cp_tree = tree_distribution['cp_tree'][idx]
@@ -253,23 +288,70 @@ def analyze_tree_distribution(tree_distribution, directory, patient_num, type, f
         freq = tree_distribution['freq'][idx]
         clonal_freq = tree_distribution['clonal_freq'][idx]
 
-        ## clonal prevalence
+        # Validate sample consistency and detect number of samples
+        num_samples = validate_sample_consistency(clonal_freq)
+        if num_samples <= 0:
+            print(f"Error: Invalid or inconsistent sample data for tree {idx}. Skipping visualization.")
+            continue
+        
+        print(f"Processing tree {idx} with {num_samples} samples")
+
+        ## Multi-sample clonal prevalence processing
         prev_mat = []
         for node, freqs in clonal_freq.items():
             for freq_sample in freqs:
-                prev_blood = freq_sample[0]
-                prev_tissue = freq_sample[1]
-                prev_mat.append({'fraction': prev_blood, 'sample': 'blood', 'clone': node})
-                prev_mat.append({'fraction': prev_tissue, 'sample': 'tissue', 'clone': node})
+                # Dynamic multi-sample processing (following run_data_multi_sample.py pattern)
+                actual_num_samples = len(freq_sample)
+                for sample_idx in range(actual_num_samples):
+                    # Generate sample names
+                    if custom_sample_names and sample_idx < len(custom_sample_names):
+                        sample_name = custom_sample_names[sample_idx]
+                    else:
+                        sample_name = f'{sample_prefix}_{sample_idx}'
+                    
+                    prev_mat.append({
+                        'fraction': freq_sample[sample_idx], 
+                        'sample': sample_name, 
+                        'clone': node
+                    })
+        
         df_prev = pd.DataFrame(prev_mat)
-        # visualization
-        #print(tree_structure, node_dict_name)
+        
+        # Enhanced multi-sample visualization
         if fig:
+            # Render phylogenetic tree (unchanged)
             g = render_tumor_tree(tree_structure, node_dict_name)
             g.render(filename=directory / f'{patient_num}_tree_dist{idx}_{type}')
 
-            plt.figure()
-            sns.barplot(data=df_prev, x='clone',y='fraction', hue='sample')
-            plt.title(str(patient_num) + '_' + str(idx) + '_freq' + str(freq))
-            plt.savefig(directory / f'{patient_num}_freq_dist{idx}_{type}.png')
+            # Enhanced multi-sample frequency plot
+            plt.figure(figsize=(12, 6))  # Wider figure for multiple samples
+            
+            # Use seaborn color palette for better multi-sample visualization
+            actual_num_samples = len(df_prev['sample'].unique())
+            colors = sns.color_palette("Set2", actual_num_samples)
+            
+            # Create the bar plot with improved aesthetics
+            sns.barplot(data=df_prev, x='clone', y='fraction', hue='sample', palette=colors)
+            
+            # Improved title with sample count information
+            plt.title(f'{patient_num}_tree_{idx}_freq{freq} ({actual_num_samples} samples)', 
+                     fontsize=12, fontweight='bold')
+            
+            # Better legend positioning for multiple samples
+            plt.legend(title='Sample', bbox_to_anchor=(1.05, 1), loc='upper left')
+            
+            # Improve axis labels
+            plt.xlabel('Clone', fontweight='bold')
+            plt.ylabel('Clonal Frequency', fontweight='bold')
+            
+            # Rotate x-axis labels if many clones
+            if len(df_prev['clone'].unique()) > 8:
+                plt.xticks(rotation=45)
+            
+            # Save with tight layout to accommodate legend
+            plt.tight_layout()
+            plt.savefig(directory / f'{patient_num}_freq_dist{idx}_{type}.png', 
+                       dpi=300, bbox_inches='tight')
             plt.close()
+            
+            print(f"Saved visualizations for tree {idx} with {actual_num_samples} samples")
