@@ -56,6 +56,14 @@
   - [x] Multi-sample support with dynamic sample detection (2 to n samples)
   - [x] Publication-quality combined tree + frequency visualizations
 
+- [x] **Output Directory Consistency**: ✅ **COMPLETED**
+  - [x] Fixed inconsistent output directory handling in `aggregate.py` and `aggregation.sh`
+  - [x] Added explicit `--output-dir` parameter to `aggregate.py` following pipeline conventions
+  - [x] Removed confusing directory forwarding logic from `aggregation.sh`
+  - [x] Updated `marker_selection.sh` with shorthand arguments (`-a`, `-s`, `-o`, etc.) for cleaner command lines
+  - [x] Ensured consistent output directory patterns across all pipeline stages
+  - [x] Eliminated temporary file copying and moving operations
+
 - [ ] **Testing and Validation**:
   - Test aggregation improvements with existing test data (20 bootstrap samples)
   - Validate that multi-sample aggregation produces consistent results
