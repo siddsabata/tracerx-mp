@@ -13,6 +13,7 @@ def process_bootstrap_data(
     patient: str,
     bootstrap_list: list[int],
     bootstrap_parent_dir: Path,
+    output_dir: Path,
     method: str = 'phylowgs'
 ) -> None:
     """
@@ -22,11 +23,12 @@ def process_bootstrap_data(
         patient (str): Patient ID (primarily for naming output files).
         bootstrap_list (list[int]): List of bootstrap numbers to process.
         bootstrap_parent_dir (Path): The direct path to the directory containing bootstrapN subdirectories 
-                                     (e.g., /path/to/data/CRUK0044/initial/).
+                                     (e.g., /path/to/data/CRUK0044/initial/bootstraps).
+        output_dir (Path): The directory where aggregation results will be saved.
         method (str): Method used (default: phylowgs).
     """
-    # Aggregation results will be saved in a subdirectory of the bootstrap_parent_dir
-    aggregation_output_dir = bootstrap_parent_dir / 'aggregation_results'
+    # Use the provided output directory instead of hardcoding it
+    aggregation_output_dir = output_dir
     
     print(f"\nProcessing bootstrap data for patient: {patient}")
     print(f"Bootstrap parent directory: {bootstrap_parent_dir}")
@@ -128,7 +130,10 @@ def parse_args():
                       help='List of bootstrap numbers to process (e.g., 1 2 3 ... 100).')
     
     parser.add_argument('--bootstrap-parent-dir', type=str, required=True,
-                      help='The direct path to the directory containing bootstrapN subdirectories (e.g., /path/to/data/CRUK0044/initial/).')
+                      help='The direct path to the directory containing bootstrapN subdirectories (e.g., /path/to/data/CRUK0044/initial/bootstraps).')
+
+    parser.add_argument('--output-dir', type=str, required=True,
+                      help='Output directory for aggregation results.')
 
     parser.add_argument('--method', type=str, default='phylowgs',
                       help='Method used (default: phylowgs).')
@@ -139,6 +144,7 @@ if __name__ == "__main__":
     args = parse_args()
     
     bootstrap_parent_dir = Path(args.bootstrap_parent_dir)
+    output_dir = Path(args.output_dir)
     
     if not args.bootstrap_list:
         print("Error: --bootstrap-list must be provided.")
@@ -148,13 +154,15 @@ if __name__ == "__main__":
         patient=args.patient,
         bootstrap_list=args.bootstrap_list,
         bootstrap_parent_dir=bootstrap_parent_dir,
+        output_dir=output_dir,
         method=args.method
     )
 
 """
-Example usage based on new structure:
+Example usage with explicit output directory:
 python 3-aggregation/aggregate.py CRUK0044 \
     --bootstrap-list $(seq 1 100) \
-    --bootstrap-parent-dir /path/to/data/CRUK0044/initial/ \
+    --bootstrap-parent-dir /path/to/data/CRUK0044/initial/bootstraps \
+    --output-dir /path/to/data/CRUK0044/initial/aggregation_results \
     --method phylowgs
 """

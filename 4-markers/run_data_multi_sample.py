@@ -24,25 +24,25 @@ def parse_args():
     parser.add_argument('patient', type=str,
                       help='Patient ID')
     
-    parser.add_argument('--read-depth', type=int, default=1500,
+    parser.add_argument('-r', '--read-depth', type=int, default=1500,
                       help='Read depth for analysis (default: 1500)')
     
-    parser.add_argument('--aggregation-dir', type=str, required=True,
+    parser.add_argument('-a', '--aggregation-dir', type=str, required=True,
                         help='Path to the directory containing phylowgs_bootstrap_aggregation.pkl')
     
-    parser.add_argument('--ssm-file', type=str, required=True,
+    parser.add_argument('-s', '--ssm-file', type=str, required=True,
                         help='Path to the ssm.txt file for this patient')
     
-    parser.add_argument('--output-dir', type=str,
+    parser.add_argument('-o', '--output-dir', type=str,
                         help='Path to output directory for marker selection results')
     
     # VAF filtering options
-    parser.add_argument('--filter-strategy', type=str, 
+    parser.add_argument('-f', '--filter-strategy', type=str, 
                        choices=['any_high', 'all_high', 'majority_high', 'specific_samples'],
                        default='any_high',
                        help='VAF filtering strategy (default: any_high)')
     
-    parser.add_argument('--filter-threshold', type=float, default=0.9,
+    parser.add_argument('-t', '--filter-threshold', type=float, default=0.9,
                        help='VAF threshold for filtering (default: 0.9)')
     
     parser.add_argument('--filter-samples', type=int, nargs='+',

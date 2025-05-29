@@ -117,14 +117,14 @@ fi
 
 echo "Running multi-sample Python marker selection script: $MARKER_SCRIPT_PATH"
 
-# Build the command with required arguments
+# Build the command with required arguments using shorthand options
 CMD="python \"$MARKER_SCRIPT_PATH\" \"${PATIENT_ID}\" \
-    --aggregation-dir \"${AGGREGATION_DIR}\" \
-    --ssm-file \"${SSM_FILE}\" \
-    --read-depth \"${READ_DEPTH}\" \
-    --output-dir \"${MARKERS_DIR}\" \
-    --filter-strategy \"${FILTER_STRATEGY}\" \
-    --filter-threshold \"${FILTER_THRESHOLD}\""
+    -a \"${AGGREGATION_DIR}\" \
+    -s \"${SSM_FILE}\" \
+    -r \"${READ_DEPTH}\" \
+    -o \"${MARKERS_DIR}\" \
+    -f \"${FILTER_STRATEGY}\" \
+    -t \"${FILTER_THRESHOLD}\""
 
 # Add filter samples if specified (for specific_samples strategy)
 if [ -n "$FILTER_SAMPLES" ]; then

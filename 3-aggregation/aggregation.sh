@@ -8,18 +8,20 @@
 set -e
 
 # --- Argument Parsing and Validation ---
-if [ "$#" -ne 3 ]; then
+if [ "$#" -ne 4 ]; then
     echo "Error: Incorrect number of arguments."
-    echo "Usage: sbatch $0 <patient_id> <bootstrap_parent_directory> <code_directory>"
-    echo "Example: sbatch $0 CRUK0001 /path/to/data/initial/bootstraps /path/to/tracerx-mp"
+    echo "Usage: sbatch $0 <patient_id> <bootstrap_parent_directory> <output_directory> <code_directory>"
+    echo "Example: sbatch $0 CRUK0001 /path/to/data/initial/bootstraps /path/to/data/initial/aggregation_results /path/to/tracerx-mp"
     exit 1
 fi
 
 PATIENT_ID=$1
 BOOTSTRAP_PARENT_DIR=$2 # This is the directory containing bootstrapN folders
-CODE_DIR=$3
-NUM_BOOTSTRAPS=100        # Hardcoded as per previous request
+OUTPUT_DIR=$3           # Explicit output directory for aggregation results
+CODE_DIR=$4
+NUM_BOOTSTRAPS=100      # Hardcoded as per previous request
 
+# --- Validate Input Directories ---
 if [ ! -d "$BOOTSTRAP_PARENT_DIR" ]; then
     echo "Error: Bootstrap parent directory '$BOOTSTRAP_PARENT_DIR' not found."
     exit 1
@@ -32,9 +34,8 @@ fi
 
 echo "--- Aggregation Script Start (initial output to SLURM default log) ---"
 
-# --- Setup Log Directory (in the parent of BOOTSTRAP_PARENT_DIR) --- 
-# BOOTSTRAP_PARENT_DIR is now expected to be the directory containing bootstrapN folders (e.g., .../initial/bootstraps)
-LOG_DIR_IN_PARENT="$(dirname "$BOOTSTRAP_PARENT_DIR")/logs"
+# --- Setup Log Directory (in the parent of OUTPUT_DIR) --- 
+LOG_DIR_IN_PARENT="$(dirname "$OUTPUT_DIR")/logs"
 mkdir -p "$LOG_DIR_IN_PARENT"
 
 # Redirect subsequent script output to files in LOG_DIR_IN_PARENT/
@@ -45,14 +46,14 @@ echo "--- Aggregation Script Execution (output redirected) ---"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Patient ID: ${PATIENT_ID}"
 echo "Bootstrap Parent Directory: ${BOOTSTRAP_PARENT_DIR}"
+echo "Output Directory: ${OUTPUT_DIR}"
 echo "Code Directory: ${CODE_DIR}"
 echo "Number of Bootstraps (hardcoded): ${NUM_BOOTSTRAPS}"
-echo "Aggregation results will be placed in: ${BOOTSTRAP_PARENT_DIR}/aggregation_results/"
 echo "---------------------------------------"
 
 # --- Environment Activation ---
-echo "Activating conda environment: aggregation_env" # Changed from preprocess_env
-source ~/miniconda3/bin/activate aggregation_env # Changed from preprocess_env
+echo "Activating conda environment: aggregation_env"
+source ~/miniconda3/bin/activate aggregation_env
 if [ $? -ne 0 ]; then
     echo "Error: Failed to activate conda environment 'aggregation_env'. Exiting."
     exit 1
@@ -70,44 +71,22 @@ fi
 
 bootstrap_list=$(seq -s ' ' 1 $NUM_BOOTSTRAPS)
 
-# BOOTSTRAP_PARENT_DIR argument is now the direct path to bootstrapN folders.
-# Define the target output directory for final aggregation results (in the parent of BOOTSTRAP_PARENT_DIR)
-FINAL_AGGREGATION_OUTPUT_DIR="$(dirname "$BOOTSTRAP_PARENT_DIR")/aggregation_results"
-mkdir -p "${FINAL_AGGREGATION_OUTPUT_DIR}"
-
-# Path where the Python script might write its output if relative to its input dir
-TEMP_PYTHON_OUTPUT_DIR="${BOOTSTRAP_PARENT_DIR}/aggregation_results"
+# Create output directory if it doesn't exist
+mkdir -p "${OUTPUT_DIR}"
 
 echo "Running Python aggregation script: $PROCESS_SCRIPT_PATH"
-echo "Input bootstrap data expected from: $BOOTSTRAP_PARENT_DIR"
-echo "Final aggregation output will be in: $FINAL_AGGREGATION_OUTPUT_DIR"
+echo "Input bootstrap data from: $BOOTSTRAP_PARENT_DIR"
+echo "Output aggregation results to: $OUTPUT_DIR"
 
 python "$PROCESS_SCRIPT_PATH" "${PATIENT_ID}" \
     --bootstrap-list $bootstrap_list \
-    --bootstrap-parent-dir "${BOOTSTRAP_PARENT_DIR}" # Pass the directory containing bootstrapN folders directly
-    # --method phylowgs # This is the default in the python script, uncomment to override
+    --bootstrap-parent-dir "${BOOTSTRAP_PARENT_DIR}" \
+    --output-dir "${OUTPUT_DIR}"
 
 SCRIPT_EXIT_CODE=$?
 if [ $SCRIPT_EXIT_CODE -eq 0 ]; then
     echo "Aggregation Python script completed successfully for patient ${PATIENT_ID}."
-    
-    # Move results if the python script created output within its input bootstrap data directory
-    if [ -d "${TEMP_PYTHON_OUTPUT_DIR}" ]; then
-        echo "Moving aggregation results from ${TEMP_PYTHON_OUTPUT_DIR} to ${FINAL_AGGREGATION_OUTPUT_DIR}"
-        mkdir -p "${FINAL_AGGREGATION_OUTPUT_DIR}" # Ensure target exists
-        # Move contents. Using cp and rm for simplicity.
-        cp -r "${TEMP_PYTHON_OUTPUT_DIR}/"* "${FINAL_AGGREGATION_OUTPUT_DIR}/"
-        if [ $? -eq 0 ]; then
-            echo "Successfully copied results. Removing temporary output directory: ${TEMP_PYTHON_OUTPUT_DIR}"
-            rm -rf "${TEMP_PYTHON_OUTPUT_DIR}"
-        else
-            echo "Error: Failed to copy results from ${TEMP_PYTHON_OUTPUT_DIR} to ${FINAL_AGGREGATION_OUTPUT_DIR}."
-            echo "Manual check required. Temporary files left at ${TEMP_PYTHON_OUTPUT_DIR}"
-        fi
-    else
-        echo "Note: Assumed Python output directory ${TEMP_PYTHON_OUTPUT_DIR} not found. Assuming Python script wrote directly to a pre-configured location or had its own output path logic."
-        echo "Please verify aggregation results are in ${FINAL_AGGREGATION_OUTPUT_DIR}"
-    fi
+    echo "Aggregation results are available in: ${OUTPUT_DIR}"
 else
     echo "Error: Aggregation Python script failed for patient ${PATIENT_ID} with exit code $SCRIPT_EXIT_CODE."
     exit $SCRIPT_EXIT_CODE
