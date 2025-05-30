@@ -253,7 +253,7 @@ def load_tree_distributions(aggregation_dir: Path, method: str, logger: logging.
     return tree_distribution_summary, tree_distribution_full
 
 
-def load_tissue_data_from_ssm(ssm_file: Path, logger: logging.Logger) -> Tuple[pd.DataFrame, Dict, List]:
+def load_tissue_data_from_ssm(ssm_file: Path, logger: logging.Logger) -> Tuple[pd.DataFrame, Dict, List, List]:
     """
     Load and process tissue mutation data from SSM file format.
     
@@ -265,7 +265,7 @@ def load_tissue_data_from_ssm(ssm_file: Path, logger: logging.Logger) -> Tuple[p
         logger: Logger instance for reporting
         
     Returns:
-        Tuple of (tissue_dataframe, gene2idx_mapping, gene_name_list)
+        Tuple of (tissue_dataframe, gene2idx_mapping, gene_name_list, gene_list)
     """
     logger.info(f"Loading tissue data from SSM file: {ssm_file}")
     
@@ -315,7 +315,7 @@ def load_tissue_data_from_ssm(ssm_file: Path, logger: logging.Logger) -> Tuple[p
     logger.info(f"Created gene list: {len(gene_list)} genes in 's0', 's1'... format")
     logger.info(f"Processed gene names: {len(gene_name_list)} names with duplicate handling")
     
-    return tissue_df, gene2idx, gene_name_list
+    return tissue_df, gene2idx, gene_name_list, gene_list
 
 
 def load_longitudinal_data_from_csv(csv_file: Path, logger: logging.Logger) -> Dict[str, pd.DataFrame]:
@@ -394,7 +394,7 @@ def main():
         
         # Load tissue data from SSM file (Task 3.1)
         ssm_file = Path(args.ssm_file)
-        tissue_df, gene2idx, gene_name_list = load_tissue_data_from_ssm(ssm_file, logger)
+        tissue_df, gene2idx, gene_name_list, gene_list = load_tissue_data_from_ssm(ssm_file, logger)
         
         # Load longitudinal data from CSV file (Task 3.2)  
         longitudinal_file = Path(args.longitudinal_data)
