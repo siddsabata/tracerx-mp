@@ -101,6 +101,20 @@ def optimize_tree_distribution(F, R,  n_genes, n_markers, read_depth, lam1, lam2
     model.setObjective(gp.quicksum([lam1*Obj_frac, lam2*Obj_struct]), gp.GRB.MAXIMIZE)
     #model.setObjective(Obj_struct, gp.GRB.MAXIMIZE)
     model.optimize()
+    
+    # Check optimization status
+    if model.status != gp.GRB.OPTIMAL:
+        status_messages = {
+            gp.GRB.INFEASIBLE: "INFEASIBLE - No feasible solution exists",
+            gp.GRB.UNBOUNDED: "UNBOUNDED - Objective can be improved without limit", 
+            gp.GRB.INF_OR_UNBD: "INF_OR_UNBD - Infeasible or unbounded",
+            gp.GRB.NUMERIC_ERROR: "NUMERIC_ERROR - Numerical difficulties",
+            gp.GRB.SUBOPTIMAL: "SUBOPTIMAL - Unable to satisfy optimality tolerances",
+            gp.GRB.TIME_LIMIT: "TIME_LIMIT - Time limit reached"
+        }
+        status_msg = status_messages.get(model.status, f"Unknown status: {model.status}")
+        raise RuntimeError(f"Gurobi optimization failed with status {model.status}: {status_msg}")
+    
     return Obj_frac.X, Obj_struct.X, return_value_1d(z)
 
 

@@ -470,10 +470,24 @@ def main():
             # Select optimal markers based on current tree structure
             logger.info(f"Selecting {args.n_markers} optimal markers for timepoint {timepoint}")
             
-            selected_markers, obj_frac, obj_struct = select_markers_tree_gp(
-                gene_list, args.n_markers, tree_list, node_list, clonal_freq_list,
-                gene2idx, tree_freq_list, read_depth=args.read_depth,
-                lam1=args.lambda1, lam2=args.lambda2, focus_sample_idx=args.focus_sample)
+            # Debug: Log data shapes and types
+            logger.info(f"Debug - gene_list length: {len(gene_list)}")
+            logger.info(f"Debug - tree_list length: {len(tree_list)}")
+            logger.info(f"Debug - node_list length: {len(node_list)}")
+            logger.info(f"Debug - clonal_freq_list length: {len(clonal_freq_list)}")
+            logger.info(f"Debug - tree_freq_list length: {len(tree_freq_list)}")
+            logger.info(f"Debug - gene2idx keys: {list(gene2idx.keys())[:5]}...")  # First 5 keys
+            
+            try:
+                selected_markers, obj_frac, obj_struct = select_markers_tree_gp(
+                    gene_list, args.n_markers, tree_list, node_list, clonal_freq_list,
+                    gene2idx, tree_freq_list, read_depth=args.read_depth,
+                    lam1=args.lambda1, lam2=args.lambda2, focus_sample_idx=args.focus_sample)
+            except Exception as e:
+                logger.error(f"Error in marker selection: {e}")
+                import traceback
+                logger.error(f"Full traceback:\n{traceback.format_exc()}")
+                raise
             
             # Convert selected marker IDs to gene names (matching original logic)
             selected_gene_names = [gene_name_list[int(marker_id[1:])] for marker_id in selected_markers]
