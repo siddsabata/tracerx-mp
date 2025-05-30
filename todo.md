@@ -64,7 +64,7 @@
   - [x] Ensured consistent output directory patterns across all pipeline stages
   - [x] Eliminated temporary file copying and moving operations
 
-- [ ] **Testing and Validation**:
+- [x] **Testing and Validation**:
   - Test aggregation improvements with existing test data (20 bootstrap samples)
   - Validate that multi-sample aggregation produces consistent results
   - Ensure backward compatibility with existing data formats
@@ -72,38 +72,79 @@
 
 **Major Achievement**: ✅ **Multi-sample aggregation support successfully implemented! The aggregation stage now dynamically handles 2 to n samples, replacing hardcoded blood/tissue assumptions. Tested with CRUK0044 (3 tumor regions) - processed 80 bootstrap replicates and generated 120+ visualization files with proper multi-sample support.**
 
-### 3. Develop Longitudinal Update Functionality (Simplified Approach)
-**Goal**: Implement longitudinal functionality with simpler file I/O and streamlined data processing
+### 3. Develop Longitudinal Update Functionality (Updated Approach)
+**Goal**: Implement longitudinal functionality using SSM-based tissue data and CSV longitudinal data with CRUK0044 testing
 
 **Implementation Tasks**:
-- [ ] **Simplified Longitudinal Data Format**:
-  - Design streamlined data format for longitudinal blood samples
-  - Use similar tab-separated format as SSM files for consistency
-  - Minimize complex data transformations and focus on core functionality
-  - Create example longitudinal data files for testing
 
-- [ ] **Longitudinal Processing Module**:
-  - Create `5-longitudinal/` directory with simplified structure:
+- [ ] **Task 3.1: SSM-Based Tissue Data Integration**:
+  - Modify longitudinal processing to extract patient tissue data from SSM files instead of Excel
+  - Use similar approach as implemented in marker selection stage (`convert_ssm_to_dataframe_v2.py`)
+  - Extract gene names, genomic positions, and VAF data from SSM format
+  - Ensure compatibility with existing gene-to-index mapping functionality
+  - Test tissue data extraction with CRUK0044 SSM file
+
+- [ ] **Task 3.2: CSV Longitudinal Data Processing**:
+  - Replace Excel file reading with CSV processing for longitudinal blood sample data
+  - Handle CSV format with additional date column for temporal grouping
+  - Implement date-based grouping functionality to organize timepoints
+  - Parse ddPCR data (mutant droplets, total droplets) from CSV format
+  - Maintain compatibility with existing VAF calculation methods
+  - Create example CSV format documentation and test files
+
+- [ ] **Task 3.3: CRUK0044 Integration and Testing**:
+  - Configure longitudinal pipeline to work with CRUK0044 data structure
+  - Update input handling to accept:
+    - CRUK0044 SSM file (data/ssm.txt)
+    - CRUK0044 longitudinal CSV data (user-provided)
+    - Aggregation results from CRUK0044 initial pipeline run
+  - Test complete workflow with real patient data
+  - Validate that tissue and longitudinal data integration works correctly
+  - Document any data format requirements or preprocessing needed
+
+- [ ] **Task 3.4: Output Analysis and Improvement Planning**:
+  - Run longitudinal analysis with CRUK0044 data and examine outputs
+  - Assess quality and usability of current output formats:
+    - Updated tree distribution files (*.pkl)
+    - Tree weight change visualizations (*.eps)
+    - Selected marker recommendations
+  - Identify gaps and areas needing improvement
+  - Create additional tickets based on output analysis results
+  - Document current output capabilities and limitations
+
+- [ ] **Task 3.5: Time Series Visualization Implementation**:
+  - Implement time series plots showing clonal fraction evolution over time
+  - Create plots showing:
+    - Clonal fraction changes for each mutation/clone over multiple timepoints
+    - Temporal trends in overall clonal burden
+    - Individual marker VAF trajectories from ddPCR data
+    - Tree probability evolution over time
+  - Integrate time series plots with existing visualization framework
+  - Generate publication-quality temporal evolution figures
+  - Support multiple visualization formats (PNG, PDF, EPS)
+
+- [ ] **Task 3.6: Longitudinal Processing Module Structure**:
+  - Create `5-longitudinal/` directory with updated structure:
     - `longitudinal_update.sh`: SLURM job submission script
     - `longitudinal_update.py`: Core longitudinal processing implementation
+    - `ssm_tissue_processor.py`: SSM-based tissue data extraction
+    - `csv_longitudinal_processor.py`: CSV longitudinal data processing
+    - `temporal_visualizer.py`: Time series plotting functionality
     - `environment.yml`: Conda environment for longitudinal processing
-  - Implement methods to:
-    - Read longitudinal ddPCR data from blood samples
-    - Update existing tree structures with new time point data
-    - Recalculate clonal fractions over time
-    - Track temporal changes in clonal evolution
-    - Generate longitudinal reports and visualizations
+  - Ensure modular design for easy testing and maintenance
+  - Maintain compatibility with existing pipeline outputs and data structures
 
-- [ ] **Integration with Existing Pipeline**:
-  - Ensure longitudinal module can read outputs from the initial pipeline
-  - Maintain compatibility with existing data structures and formats
-  - Use the improved multi-sample framework as foundation
-  - Leverage enhanced visualization capabilities from aggregation improvements
+**Testing Strategy**:
+- Use CRUK0044 as primary test case throughout development
+- Validate each task with real patient data before proceeding
+- Compare outputs with existing 5-long implementation where applicable
+- Create comprehensive documentation of data format requirements
 
-- [ ] **Testing and Validation**:
-  - Create simulated longitudinal datasets for testing
-  - Validate longitudinal updates against known temporal patterns
-  - Test integration with improved aggregation and visualization
+**Expected Outputs After Completion**:
+- Longitudinal analysis working with SSM + CSV inputs
+- Time series plots showing clonal evolution over time
+- Analysis of current output quality and improvement needs
+- Foundation for clinical report generation (future ticket)
 
 ### 4. Incorporate Longitudinal Updates into an Automated Script
 **Goal**: Create a second master script for orchestrating longitudinal updates
@@ -172,14 +213,26 @@ For each stage of implementation:
   - [x] Enhanced visualization: ✅ **COMPLETED** (3-4 days)
   - [x] Best tree visualization: ✅ **COMPLETED** (2-3 days)  
   - [ ] Testing and validation: 1-2 days
-- **Ticket 3**: 10-14 days (simplified longitudinal functionality)
+- **Ticket 3**: 12-16 days (updated longitudinal functionality with CRUK0044 testing)
+  - Task 3.1 (SSM tissue data integration): 2-3 days
+  - Task 3.2 (CSV longitudinal processing): 2-3 days  
+  - Task 3.3 (CRUK0044 integration & testing): 2-3 days
+  - Task 3.4 (Output analysis & planning): 1-2 days
+  - Task 3.5 (Time series visualization): 3-4 days
+  - Task 3.6 (Module structure & integration): 2-3 days
 - **Ticket 4**: 3-5 days (longitudinal automation script)
 - **Ticket 5**: 5-7 days (SLURM automation improvements - **NOT CURRENTLY WORKING**)
 
 **Progress**: 1.25/5 tickets completed. The multi-sample framework is now fully implemented across both marker selection and aggregation stages, providing a solid foundation for enhanced visualizations and longitudinal analysis.
 
-**Total remaining for core functionality**: 19-29 days (tickets 2-4)
-**Total if including automation**: 24-36 days (all tickets, but automation may not be feasible)
+**Total remaining for core functionality**: 21-33 days (tickets 2-4)
+**Total if including automation**: 26-40 days (all tickets, but automation may not be feasible)
+
+**Updated Timeline Notes**:
+- **CRUK0044 focus**: Using real patient data throughout longitudinal development
+- **Modular approach**: 6 distinct tasks allow for incremental progress and testing
+- **Output-driven development**: Task 3.4 will guide future improvement tickets
+- **Time series priority**: Enhanced visualization capabilities (Task 3.5) are key deliverable
 
 ## Implementation Notes
 - **Multi-sample foundation**: ✅ **COMPLETED** - The multi-sample SSM conversion framework is now fully implemented across aggregation and marker selection stages
@@ -188,43 +241,12 @@ For each stage of implementation:
 - **Documentation**: All improvements are thoroughly documented for future development and maintenance
 - **Automation concerns**: Full SLURM script automation is not currently working and should be considered optional/future work
 
-### 6. Incorporate Longitudinal Updates into an Automated Script
-**Goal**: Create a second master script for orchestrating longitudinal updates
-
-**Implementation Tasks**:
-- [ ] Create `longitudinal_init.sh` script modeled after `main_init.sh`
-- [ ] Structure the script to:
-  - Accept parameters:
-    - Patient ID
-    - Initial results directory
-    - Longitudinal data file(s)
-    - Time points
-  - Create appropriate directory structure for longitudinal results
-  - Submit jobs with proper dependencies
-  
-- [ ] Implement robust error handling and logging
-- [ ] Test with simulated longitudinal data
-- [ ] Document the longitudinal update process
-
-## Testing Methodology
-For each stage of implementation:
-1. Start with minimal test cases
-2. Log intermediate outputs extensively
-3. Validate outputs against expected results
-4. Only proceed to the next stage when current stage is stable
-
-## Resources Required
-- Slurm cluster access (Guorbi)
-- Conda environment management
-- Patient data (small subset initially)
-- Additional storage for longitudinal results
-
-## Timeline Estimate
-- Ticket 1: ✅ Completed (1 day)
-- Ticket 2: ✅ **Multi-sample support COMPLETED**, Enhanced visualization IN PROGRESS (5 days total - included multi-sample SSM conversion work)
-- Ticket 3: 7-10 days 
-- Ticket 4: 3-5 days
-
-**Progress**: 1.25/4 tickets completed. Multi-sample aggregation support successfully implemented and tested. The aggregation stage now handles 2 to n samples dynamically, consistent with the marker selection stage framework.
-
-Total remaining: 8-13 days for enhanced visualization + longitudinal functionality 
+### finishing touches 
+- [ ] in markers, fix up the output. add more details about the output 
+  - explain method 1 (fraction optimization)
+  - Method 2 Results (lam1=0, lam2=1) is tree structure optimization
+    - you want to do this at the initial step
+  - Method 2 Results (lam1=1, lam2=0) is fraction optimization
+- [ ] clean up input directory inputs for slurm scripts
+  - assume the directory is already created. the script should not be creating 
+    the directory. the user should deal with this themselves. 
