@@ -432,10 +432,11 @@ def main():
                 current_tree_summary = tree_distribution_summary
                 current_tree_full = tree_distribution_full
                 
-                # Extract tree components for analysis
-                tree_list = current_tree_summary['tree_structure']
-                node_list = current_tree_summary['node_dict']
-                tree_freq_list = current_tree_summary['freq']
+                # Extract tree components for analysis - USE FULL DISTRIBUTION FOR ALL COMPONENTS
+                # This ensures all arrays have the same length and consistent indexing
+                tree_list = current_tree_full['tree_structure']
+                node_list = current_tree_full['node_dict'] 
+                tree_freq_list = current_tree_full['freq']
                 clonal_freq_list = current_tree_full['vaf_frac']
                 
                 logger.info(f"Using original tree distributions: {len(tree_list)} trees")
