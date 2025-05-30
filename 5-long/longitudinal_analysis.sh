@@ -21,9 +21,9 @@ fi
 echo "Gurobi module loaded successfully."
 
 # --- Argument Parsing and Validation ---
-if [ "$#" -lt 5 ] || [ "$#" -gt 10 ]; then
+if [ "$#" -lt 6 ] || [ "$#" -gt 10 ]; then
     echo "Error: Incorrect number of arguments."
-    echo "Usage: sbatch $0 <patient_id> <aggregation_directory> <ssm_file_path> <longitudinal_data_csv> <output_directory> [code_directory] [n_markers] [read_depth] [algorithm] [additional_flags]"
+    echo "Usage: sbatch $0 <patient_id> <aggregation_directory> <ssm_file_path> <longitudinal_data_csv> <output_directory> <code_directory> [n_markers] [read_depth] [algorithm] [additional_flags]"
     echo "Example: sbatch $0 CRUK0044 /path/to/data/CRUK0044/initial/aggregation_results /path/to/data/CRUK0044/ssm.txt /path/to/data/cruk0044_liquid.csv /path/to/data/CRUK0044/longitudinal /path/to/tracerx-mp 2 90000 struct '--debug'"
     echo "Algorithms: struct, frac"
     echo "Additional flags: '--debug', '--no-plots', '--save-intermediate', etc."
@@ -35,7 +35,7 @@ AGGREGATION_DIR=$2
 SSM_FILE=$3
 LONGITUDINAL_CSV=$4
 OUTPUT_DIR=$5
-CODE_DIR=${6:-"$(pwd)"} # Default to current directory if not provided
+CODE_DIR=$6  # Now mandatory - base repository directory
 N_MARKERS=${7:-2} # Default to 2 markers if not provided
 READ_DEPTH=${8:-90000} # Default to 90000 if not provided
 ALGORITHM=${9:-struct} # Default to struct if not provided

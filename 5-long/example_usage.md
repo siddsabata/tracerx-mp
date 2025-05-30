@@ -19,13 +19,14 @@ The `longitudinal_analysis.sh` script runs the production-ready longitudinal can
 # Create output directory first
 mkdir -p /path/to/data/CRUK0044/longitudinal
 
-# Submit SLURM job
+# Submit SLURM job (code directory is now mandatory)
 sbatch longitudinal_analysis.sh \
     CRUK0044 \
     /path/to/data/CRUK0044/initial/aggregation_results \
     /path/to/data/CRUK0044/ssm.txt \
     /path/to/data/cruk0044_liquid.csv \
-    /path/to/data/CRUK0044/longitudinal
+    /path/to/data/CRUK0044/longitudinal \
+    /path/to/tracerx-mp
 ```
 
 ## Advanced Usage with Custom Parameters
@@ -54,7 +55,7 @@ sbatch longitudinal_analysis.sh \
 | 3 | `ssm_file_path` | Required | Path to SSM file |
 | 4 | `longitudinal_data_csv` | Required | Path to longitudinal CSV |
 | 5 | `output_directory` | Required | Output directory (must exist) |
-| 6 | `code_directory` | `$(pwd)` | Path to TracerX codebase |
+| 6 | `code_directory` | Required | Path to TracerX repository base directory |
 | 7 | `n_markers` | 2 | Number of markers to select |
 | 8 | `read_depth` | 90000 | Expected ddPCR read depth |
 | 9 | `algorithm` | struct | Algorithm type (struct/frac) |
