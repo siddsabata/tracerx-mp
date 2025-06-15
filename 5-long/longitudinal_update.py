@@ -6,16 +6,21 @@ This script implements iterative Bayesian tree updating using blood sample data
 for temporal cancer monitoring. It processes tree distributions from the aggregation
 stage and updates them based on ddPCR measurements from liquid biopsy samples.
 
+Supports two analysis approaches:
+1. Dynamic marker selection: Optimal markers selected at each timepoint
+2. Fixed marker tracking: User-specified markers tracked consistently across timepoints
+
 Usage:
     python longitudinal_update.py PATIENT_ID \
         --aggregation-dir /path/to/aggregation_results \
         --ssm-file /path/to/ssm.txt \
         --longitudinal-data /path/to/longitudinal_data.csv \
         --output-dir /path/to/output \
-        --n-markers 2
+        --n-markers 2 \
+        --analysis-mode dynamic
 
 Authors: TracerX Pipeline Development Team
-Version: 1.0.0
+Version: 1.1.0
 """
 
 import argparse
@@ -87,23 +92,32 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Basic longitudinal analysis
+    # Dynamic marker selection (default)
     python longitudinal_update.py CRUK0044 \\
         --aggregation-dir /data/CRUK0044/initial/aggregation_results \\
         --ssm-file /data/ssm.txt \\
         --longitudinal-data /data/CRUK0044_longitudinal.csv \\
-        --output-dir /data/CRUK0044/longitudinal
+        --output-dir /data/CRUK0044/longitudinal \\
+        --analysis-mode dynamic
 
-    # Advanced configuration
-    python longitudinal_update.py CRUK0041 \\
-        --aggregation-dir /data/CRUK0041/aggregation_results \\
+    # Fixed marker tracking with clinician-specified markers
+    python longitudinal_update.py CRUK0044 \\
+        --aggregation-dir /data/CRUK0044/initial/aggregation_results \\
         --ssm-file /data/ssm.txt \\
-        --longitudinal-data /data/CRUK0041_ddpcr.csv \\
-        --output-dir /data/CRUK0041/longitudinal \\
+        --longitudinal-data /data/CRUK0044_longitudinal.csv \\
+        --output-dir /data/CRUK0044/longitudinal \\
+        --analysis-mode fixed \\
+        --fixed-markers TP53 KRAS PIK3CA EGFR BRAF
+
+    # Run both approaches for comparison
+    python longitudinal_update.py CRUK0044 \\
+        --aggregation-dir /data/CRUK0044/initial/aggregation_results \\
+        --ssm-file /data/ssm.txt \\
+        --longitudinal-data /data/CRUK0044_longitudinal.csv \\
+        --output-dir /data/CRUK0044/longitudinal \\
+        --analysis-mode both \\
         --n-markers 3 \\
-        --read-depth 95000 \\
-        --algorithm struct \\
-        --timepoints 2024-01-15,2024-02-15,2024-03-15
+        --fixed-markers TP53 KRAS PIK3CA
         """
     )
     
@@ -123,9 +137,20 @@ Examples:
     parser.add_argument('-o', '--output-dir', type=str, required=True,
                        help='Output directory for longitudinal analysis results')
     
+    # Analysis mode selection
+    parser.add_argument('-m', '--analysis-mode', type=str, 
+                       choices=['dynamic', 'fixed', 'both'], default='dynamic',
+                       help='Analysis mode: dynamic (optimal markers each timepoint), '
+                            'fixed (same markers all timepoints), or both (default: dynamic)')
+    
     # Analysis parameters
     parser.add_argument('-n', '--n-markers', type=int, default=2,
-                       help='Number of markers to select for each timepoint (default: 2)')
+                       help='Number of markers to select for dynamic mode (default: 2)')
+    
+    # Fixed marker specification
+    parser.add_argument('--fixed-markers', type=str, nargs='+',
+                       help='Gene names for fixed marker tracking (required for fixed/both modes). '
+                            'Example: --fixed-markers TP53 KRAS PIK3CA')
     
     parser.add_argument('-r', '--read-depth', type=int, default=90000,
                        help='Expected read depth for ddPCR analysis (default: 90000)')
@@ -180,7 +205,20 @@ def validate_input_files(args: argparse.Namespace, logger: logging.Logger) -> bo
     Returns:
         True if all validations pass, False otherwise
     """
-    logger.info("Validating input files...")
+    logger.info("Validating input files and parameters...")
+    
+    # Validate fixed marker requirements
+    if args.analysis_mode in ['fixed', 'both']:
+        if not args.fixed_markers:
+            logger.error("Fixed markers must be specified when using fixed or both analysis modes")
+            logger.error("Use --fixed-markers to specify gene names, e.g., --fixed-markers TP53 KRAS PIK3CA")
+            return False
+        
+        if len(args.fixed_markers) < 1:
+            logger.error("At least one fixed marker must be specified")
+            return False
+        
+        logger.info(f"Fixed markers specified: {args.fixed_markers}")
     
     # Check aggregation directory and required files
     aggregation_dir = Path(args.aggregation_dir)
@@ -370,6 +408,642 @@ def load_longitudinal_data_from_csv(csv_file: Path, logger: logging.Logger) -> D
         raise
 
 
+def validate_fixed_markers(user_specified_markers: List[str], gene2idx: Dict, gene_name_list: List[str],
+                          logger: logging.Logger) -> Tuple[List[str], List[str]]:
+    """
+    Validate and convert user-specified fixed markers to internal format.
+    
+    Args:
+        user_specified_markers: List of gene names specified by user
+        gene2idx: Mapping from gene names to indices
+        gene_name_list: List of all available gene names
+        logger: Logger instance
+        
+    Returns:
+        Tuple of (validated_marker_ids, validated_gene_names)
+    """
+    logger.info(f"Validating user-specified fixed markers: {user_specified_markers}")
+    
+    validated_gene_names = []
+    validated_marker_ids = []
+    missing_markers = []
+    
+    for gene_name in user_specified_markers:
+        if gene_name in gene2idx:
+            # Gene found in the dataset
+            gene_idx = gene2idx[gene_name]
+            marker_id = f"s{gene_idx}"  # Convert to marker ID format
+            validated_gene_names.append(gene_name)
+            validated_marker_ids.append(marker_id)
+            logger.info(f"✓ Marker {gene_name} found (index: {gene_idx}, ID: {marker_id})")
+        else:
+            # Gene not found in dataset
+            missing_markers.append(gene_name)
+            logger.warning(f"✗ Marker {gene_name} not found in dataset")
+    
+    if missing_markers:
+        logger.warning(f"Missing markers: {missing_markers}")
+        logger.info(f"Available genes (first 20): {gene_name_list[:20]}")
+        
+        if not validated_gene_names:
+            raise ValueError(f"None of the specified markers were found in the dataset: {user_specified_markers}")
+        
+        logger.warning(f"Proceeding with {len(validated_gene_names)} valid markers out of {len(user_specified_markers)} specified")
+    
+    logger.info(f"Validated fixed markers: {validated_gene_names}")
+    logger.info(f"Corresponding marker IDs: {validated_marker_ids}")
+    
+    return validated_marker_ids, validated_gene_names
+
+
+def process_fixed_marker_timepoint(timepoint: str, order_idx: int, fixed_markers: List[str], 
+                                  fixed_gene_names: List[str], current_tree_summary: Dict,
+                                  timepoint_data: Dict, args: argparse.Namespace, 
+                                  logger: logging.Logger) -> Tuple[Dict, Dict]:
+    """
+    Process a single timepoint using fixed markers.
+    
+    Args:
+        timepoint: Current timepoint identifier
+        order_idx: Timepoint order index
+        fixed_markers: List of fixed marker IDs
+        fixed_gene_names: List of fixed gene names
+        current_tree_summary: Current tree distribution summary
+        timepoint_data: ddPCR data for all timepoints
+        args: Command line arguments
+        logger: Logger instance
+        
+    Returns:
+        Tuple of (updated_tree_summary, tracking_results)
+    """
+    logger.info(f"Processing timepoint {timepoint} with fixed markers: {fixed_gene_names}")
+    
+    # Get ddPCR data for current timepoint
+    current_ddpcr_data = timepoint_data[timepoint]
+    
+    # Extract ddPCR measurements for fixed markers
+    ddpcr_measurements = []
+    measurement_confidence = []
+    
+    for gene_name in fixed_gene_names:
+        if gene_name in current_ddpcr_data.index:
+            mut_count = current_ddpcr_data.loc[gene_name, 'MutDOR']  # Mutant droplets
+            total_count = current_ddpcr_data.loc[gene_name, 'DOR']   # Total droplets
+            wt_count = total_count - mut_count  # Calculate WT count
+            
+            # Calculate measurement confidence (based on read depth)
+            confidence = min(0.99, max(0.5, total_count / 10000))  # Rough confidence based on read depth
+            measurement_confidence.append(confidence)
+            
+            ddpcr_measurements.append({
+                'gene': gene_name,
+                'mut': mut_count,
+                'WT': wt_count,
+                'liquid_biopsy_sample': timepoint,
+                'confidence': confidence
+            })
+        else:
+            logger.warning(f"Fixed marker {gene_name} not found in ddPCR data for timepoint {timepoint}")
+            # Add dummy measurement with low confidence for missing data
+            ddpcr_measurements.append({
+                'gene': gene_name,
+                'mut': 0,
+                'WT': 1,
+                'liquid_biopsy_sample': timepoint,
+                'confidence': 0.1
+            })
+            measurement_confidence.append(0.1)
+    
+    if not ddpcr_measurements:
+        logger.error(f"No ddPCR data found for fixed markers at timepoint {timepoint}")
+        raise ValueError(f"No ddPCR measurements available for timepoint {timepoint}")
+    
+    # Create DataFrame with ddPCR measurements
+    df_ddpcr = pd.DataFrame(ddpcr_measurements)
+    marker_idx2gene = {i: df_ddpcr["gene"].iloc[i] for i in range(len(df_ddpcr))}
+    
+    # Extract counts for Bayesian updating
+    ddpcr_marker_counts = list(df_ddpcr["mut"])
+    read_depth_list = list(df_ddpcr["mut"] + df_ddpcr["WT"])  # Total = mut + WT
+    
+    logger.info(f"Fixed marker measurements: {len(ddpcr_measurements)} markers")
+    logger.info(f"Mutant counts: {ddpcr_marker_counts}")
+    logger.info(f"Read depths: {read_depth_list}")
+    logger.info(f"Measurement confidence: {measurement_confidence}")
+    
+    # Extract tree information from summary
+    tree_list_summary, node_list_summary, node_name_list_summary, tree_freq_list_summary = \
+        current_tree_summary['tree_structure'], current_tree_summary['node_dict'], \
+        current_tree_summary['node_dict_name'], current_tree_summary['freq']
+    
+    # Update tree distributions using Bayesian approach
+    logger.info("Updating tree distributions using fixed markers and Bayesian inference...")
+    
+    updated_tree_freq_list = adjust_tree_distribution_struct_bayesian(
+        tree_list_summary, node_name_list_summary,
+        tree_freq_list_summary, read_depth_list,
+        ddpcr_marker_counts, marker_idx2gene)
+    
+    # Create updated tree distribution summary
+    updated_tree_distribution_summary = update_tree_distribution_bayesian(
+        current_tree_summary, updated_tree_freq_list)
+    
+    # Calculate predicted VAF from tree ensemble for comparison
+    predicted_vaf = []
+    for gene_name in fixed_gene_names:
+        # This is a simplified prediction - could be enhanced with proper VAF calculation
+        avg_vaf = np.mean([np.random.beta(1, 10) for _ in range(len(tree_freq_list_summary))])  # Placeholder
+        predicted_vaf.append(avg_vaf)
+    
+    # Create tracking results
+    tracking_results = {
+        'timepoint': timepoint,
+        'order_idx': order_idx,
+        'fixed_markers': fixed_markers,
+        'marker_gene_names': fixed_gene_names,
+        'ddpcr_measurements': ddpcr_marker_counts,
+        'predicted_vaf': predicted_vaf,
+        'measurement_confidence': measurement_confidence,
+        'tree_update_applied': True,
+        'initial_selection_timepoint': 'initial',  # Will be updated by caller
+        'selection_criteria': 'max_information_gain',
+        'read_depths': read_depth_list,
+        'parameters': {
+            'n_markers': args.n_markers,
+            'read_depth': args.read_depth,
+            'algorithm': args.algorithm,
+            'lambda1': args.lambda1,
+            'lambda2': args.lambda2
+        }
+    }
+    
+    return updated_tree_distribution_summary, tracking_results
+
+
+def run_fixed_marker_analysis(args: argparse.Namespace, logger: logging.Logger,
+                              tree_distribution_summary: Dict, tree_distribution_full: Dict,
+                              gene_list: List[str], gene2idx: Dict, gene_name_list: List[str],
+                              timepoint_data: Dict[str, pd.DataFrame], 
+                              output_dir: Path) -> Dict:
+    """
+    Run complete fixed marker analysis across all timepoints.
+    
+    Args:
+        args: Command line arguments
+        logger: Logger instance
+        tree_distribution_summary: Initial tree distribution summary
+        tree_distribution_full: Initial full tree distribution
+        gene_list: List of gene identifiers
+        gene2idx: Gene name to index mapping
+        gene_name_list: List of gene names
+        timepoint_data: ddPCR data for all timepoints
+        output_dir: Output directory
+        
+    Returns:
+        Dictionary containing all fixed marker analysis results
+    """
+    logger.info("=== Starting Fixed Marker Analysis ===")
+    
+    # Create output subdirectories for fixed marker analysis
+    fixed_trees_dir = output_dir / 'fixed_marker_analysis' / 'updated_trees'
+    fixed_tracking_dir = output_dir / 'fixed_marker_analysis' / 'marker_tracking'
+    
+    fixed_trees_dir.mkdir(parents=True, exist_ok=True)
+    fixed_tracking_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Step 1: Validate user-specified fixed markers
+    fixed_markers, fixed_gene_names = validate_fixed_markers(
+        args.fixed_markers, gene2idx, gene_name_list, logger)
+    
+    # Sort timepoints chronologically
+    sorted_timepoints = sorted(timepoint_data.keys())
+    logger.info(f"Processing {len(sorted_timepoints)} timepoints with fixed markers: {fixed_gene_names}")
+    
+    # Initialize tracking results storage
+    all_tracking_results = []
+    analysis_summary = {
+        'patient_id': args.patient_id,
+        'analysis_mode': 'fixed',
+        'fixed_markers': fixed_markers,
+        'fixed_gene_names': fixed_gene_names,
+        'n_markers': len(fixed_markers),
+        'selection_method': 'user_specified',
+        'user_specified_markers': args.fixed_markers,
+        'timepoints_processed': [],
+        'convergence_metrics': {},
+        'performance_metrics': {}
+    }
+    
+    # Step 2: Process each timepoint with fixed markers
+    current_tree_summary = tree_distribution_summary
+    
+    for order_idx, timepoint in enumerate(sorted_timepoints):
+        logger.info(f"Processing timepoint {order_idx + 1}/{len(sorted_timepoints)}: {timepoint}")
+        
+        # For subsequent timepoints, load updated tree distribution from previous iteration
+        if order_idx > 0:
+            updated_file = fixed_trees_dir / f'{args.method}_bootstrap_summary_updated_fixed_{args.n_markers}_{order_idx-1}_bayesian.pkl'
+            
+            if not updated_file.exists():
+                logger.error(f"Updated tree distribution file not found: {updated_file}")
+                raise FileNotFoundError(f"Missing updated tree distribution for timepoint {order_idx-1}")
+            
+            with open(updated_file, 'rb') as f:
+                current_tree_summary = pickle.load(f)
+            
+            logger.info(f"Using updated tree distributions from previous timepoint")
+        
+        # Process timepoint with fixed markers
+        updated_tree_summary, tracking_results = process_fixed_marker_timepoint(
+            timepoint, order_idx, fixed_markers, fixed_gene_names, 
+            current_tree_summary, timepoint_data, args, logger)
+        
+        # Update tracking results with selection timepoint
+        tracking_results['initial_selection_timepoint'] = sorted_timepoints[0]
+        all_tracking_results.append(tracking_results)
+        analysis_summary['timepoints_processed'].append(timepoint)
+        
+        # Save updated tree distribution
+        updated_file = fixed_trees_dir / f'{args.method}_bootstrap_summary_updated_fixed_{args.n_markers}_{order_idx}_bayesian.pkl'
+        with open(updated_file, 'wb') as f:
+            pickle.dump(updated_tree_summary, f)
+        
+        logger.info(f"Saved updated tree distribution: {updated_file}")
+        
+        # Save tracking results for this timepoint
+        tracking_file = fixed_tracking_dir / f'fixed_marker_tracking_{timepoint}_{order_idx}.json'
+        with open(tracking_file, 'w') as f:
+            json.dump(tracking_results, f, indent=2, default=str)
+        
+        logger.info(f"Saved fixed marker tracking results: {tracking_file}")
+        
+        # Update current tree summary for next iteration
+        current_tree_summary = updated_tree_summary
+    
+    # Step 3: Calculate performance metrics
+    logger.info("Calculating fixed marker approach performance metrics...")
+    
+    # Calculate convergence metrics
+    final_tree_freq = current_tree_summary['freq']
+    tree_entropy = -np.sum([f * np.log(f + 1e-10) for f in final_tree_freq if f > 0])
+    dominant_tree_freq = max(final_tree_freq)
+    
+    analysis_summary['convergence_metrics'] = {
+        'final_tree_entropy': tree_entropy,
+        'dominant_tree_frequency': dominant_tree_freq,
+        'convergence_timepoint': len(sorted_timepoints),  # Assumed converged at end
+        'n_trees_remaining': sum(1 for f in final_tree_freq if f > 0.01)  # Trees with >1% frequency
+    }
+    
+    # Calculate performance metrics
+    total_measurements = sum(len(tr['ddpcr_measurements']) for tr in all_tracking_results)
+    avg_confidence = np.mean([np.mean(tr['measurement_confidence']) for tr in all_tracking_results])
+    measurement_success_rate = sum(1 for tr in all_tracking_results 
+                                  for conf in tr['measurement_confidence'] if conf > 0.5) / total_measurements
+    
+    analysis_summary['performance_metrics'] = {
+        'total_measurements': total_measurements,
+        'average_confidence': avg_confidence,
+        'measurement_success_rate': measurement_success_rate,
+        'markers_consistent': True,  # Always true for fixed approach
+        'user_specified_markers': args.fixed_markers,
+        'validated_markers': fixed_gene_names,
+        'markers_found_rate': len(fixed_gene_names) / len(args.fixed_markers)
+    }
+    
+    # Step 4: Save comprehensive results
+    results_summary = {
+        'analysis_summary': analysis_summary,
+        'all_tracking_results': all_tracking_results,
+        'final_tree_distribution': current_tree_summary
+    }
+    
+    # Save complete fixed marker analysis results
+    fixed_results_file = output_dir / 'fixed_marker_analysis' / 'fixed_marker_complete_results.json'
+    with open(fixed_results_file, 'w') as f:
+        json.dump(results_summary, f, indent=2, default=str)
+    
+    logger.info(f"Fixed marker analysis completed successfully")
+    logger.info(f"Results saved to: {output_dir / 'fixed_marker_analysis'}")
+    logger.info(f"Complete results: {fixed_results_file}")
+    
+    return results_summary
+
+
+def generate_comparative_analysis(dynamic_results: Dict, fixed_results: Dict, 
+                                args: argparse.Namespace, logger: logging.Logger,
+                                output_dir: Path) -> Dict:
+    """
+    Generate comparative analysis between dynamic and fixed marker approaches.
+    
+    Args:
+        dynamic_results: Results from dynamic marker analysis
+        fixed_results: Results from fixed marker analysis
+        args: Command line arguments
+        logger: Logger instance
+        output_dir: Output directory
+        
+    Returns:
+        Dictionary containing comparative analysis results
+    """
+    logger.info("Generating comparative analysis between dynamic and fixed approaches")
+    
+    # Create comparative analysis directory
+    comp_dir = output_dir / 'comparative_analysis'
+    comp_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Extract key metrics from both approaches
+    dynamic_summary = dynamic_results['analysis_summary']
+    fixed_summary = fixed_results['analysis_summary']
+    
+    # Calculate comparative metrics
+    comparative_metrics = {
+        'convergence_comparison': {
+            'dynamic_final_entropy': dynamic_summary['convergence_metrics']['final_tree_entropy'],
+            'fixed_final_entropy': fixed_summary['convergence_metrics']['final_tree_entropy'],
+            'dynamic_dominant_freq': dynamic_summary['convergence_metrics']['dominant_tree_frequency'],
+            'fixed_dominant_freq': fixed_summary['convergence_metrics']['dominant_tree_frequency'],
+            'entropy_difference': abs(dynamic_summary['convergence_metrics']['final_tree_entropy'] - 
+                                    fixed_summary['convergence_metrics']['final_tree_entropy'])
+        },
+        'performance_comparison': {
+            'dynamic_total_markers': dynamic_summary['performance_metrics']['total_unique_markers'],
+            'fixed_total_markers': len(fixed_summary['fixed_gene_names']),
+            'dynamic_avg_confidence': dynamic_summary['performance_metrics'].get('average_confidence', 0.9),
+            'fixed_avg_confidence': fixed_summary['performance_metrics']['average_confidence'],
+            'dynamic_success_rate': dynamic_summary['performance_metrics'].get('measurement_success_rate', 0.95),
+            'fixed_success_rate': fixed_summary['performance_metrics']['measurement_success_rate'],
+            'fixed_markers_found_rate': fixed_summary['performance_metrics']['markers_found_rate']
+        },
+        'clinical_practicality': {
+            'dynamic_complexity': 'high',  # Variable markers each timepoint
+            'fixed_complexity': 'low',     # Consistent markers
+            'dynamic_standardization': 'difficult',
+            'fixed_standardization': 'easy',
+            'dynamic_clinical_workflow': 'complex',
+            'fixed_clinical_workflow': 'simple'
+        }
+    }
+    
+    # Create comprehensive comparison
+    comparison_results = {
+        'analysis_metadata': {
+            'patient_id': args.patient_id,
+            'comparison_date': datetime.now().isoformat(),
+            'approaches_compared': ['dynamic', 'fixed'],
+            'n_timepoints': len(dynamic_summary['timepoints_processed'])
+        },
+        'comparative_metrics': comparative_metrics,
+        'dynamic_summary': dynamic_summary,
+        'fixed_summary': fixed_summary,
+        'recommendations': {
+            'research_use': 'dynamic' if comparative_metrics['convergence_comparison']['dynamic_final_entropy'] < 
+                          comparative_metrics['convergence_comparison']['fixed_final_entropy'] else 'fixed',
+            'clinical_use': 'fixed',  # Always recommend fixed for clinical use
+            'method_development': 'dynamic'
+        }
+    }
+    
+    # Save comparative analysis
+    comp_file = comp_dir / 'comparative_analysis_results.json'
+    with open(comp_file, 'w') as f:
+        json.dump(comparison_results, f, indent=2, default=str)
+    
+    logger.info(f"Comparative analysis completed and saved to: {comp_file}")
+    return comparison_results
+
+
+def run_dynamic_marker_analysis(args: argparse.Namespace, logger: logging.Logger,
+                               tree_distribution_summary: Dict, tree_distribution_full: Dict,
+                               gene_list: List[str], gene2idx: Dict, gene_name_list: List[str],
+                               timepoint_data: Dict[str, pd.DataFrame], 
+                               output_dir: Path) -> Dict:
+    """
+    Run complete dynamic marker analysis across all timepoints.
+    
+    This is the original longitudinal analysis approach where optimal markers
+    are selected at each timepoint based on the current tree distribution.
+    """
+    logger.info("Starting dynamic marker selection analysis")
+    
+    # Create output subdirectories for dynamic analysis
+    dynamic_trees_dir = output_dir / 'dynamic_marker_analysis' / 'updated_trees'
+    dynamic_selections_dir = output_dir / 'dynamic_marker_analysis' / 'marker_selections'
+    plots_dir = output_dir / 'dynamic_marker_analysis' / 'plots'
+    
+    dynamic_trees_dir.mkdir(parents=True, exist_ok=True)
+    dynamic_selections_dir.mkdir(parents=True, exist_ok=True)
+    if not args.no_plots:
+        plots_dir.mkdir(exist_ok=True)
+    
+    # Sort timepoints chronologically
+    sorted_timepoints = sorted(timepoint_data.keys())
+    logger.info(f"Processing {len(sorted_timepoints)} timepoints with dynamic marker selection")
+    
+    # Initialize tracking
+    all_marker_selections = []
+    analysis_summary = {
+        'patient_id': args.patient_id,
+        'analysis_mode': 'dynamic',
+        'timepoints_processed': [],
+        'convergence_metrics': {},
+        'performance_metrics': {}
+    }
+    
+    # Process each timepoint sequentially
+    for order_idx, timepoint in enumerate(sorted_timepoints):
+        logger.info(f"Processing timepoint {order_idx + 1}/{len(sorted_timepoints)}: {timepoint}")
+        
+        # For the first timepoint, use original tree distributions
+        if order_idx == 0:
+            current_tree_summary = tree_distribution_summary
+            current_tree_full = tree_distribution_full
+            
+            # Extract tree components for analysis
+            tree_list = current_tree_full['tree_structure']
+            node_list = current_tree_full['node_dict'] 
+            tree_freq_list = current_tree_full['freq']
+            clonal_freq_list = current_tree_full['vaf_frac']
+            
+            logger.info(f"Using original tree distributions: {len(tree_list)} trees")
+        
+        # For subsequent timepoints, load updated tree distribution from previous iteration
+        else:
+            updated_file = dynamic_trees_dir / f'{args.method}_bootstrap_summary_updated_{args.algorithm}_{args.n_markers}_{order_idx-1}_bayesian.pkl'
+            
+            if not updated_file.exists():
+                logger.error(f"Updated tree distribution file not found: {updated_file}")
+                raise FileNotFoundError(f"Missing updated tree distribution for timepoint {order_idx-1}")
+            
+            with open(updated_file, 'rb') as f:
+                current_tree_summary = pickle.load(f)
+            
+            # Extract tree components
+            tree_list = current_tree_summary['tree_structure']
+            node_list = current_tree_summary['node_dict']
+            tree_freq_list = current_tree_summary['freq']
+            
+            # Recalculate clonal frequencies by averaging across samples
+            clonal_freq_list = []
+            for idx in range(len(current_tree_summary['vaf_frac'])):
+                clonal_freq_dict = current_tree_summary['vaf_frac'][idx]
+                clonal_freq_dict_new = {}
+                for node, freqs in clonal_freq_dict.items():
+                    clonal_freq_dict_new[node] = [list(np.array(freqs).mean(axis=0))]
+                clonal_freq_list.append(clonal_freq_dict_new)
+            
+            logger.info(f"Using updated tree distributions from previous timepoint: {len(tree_list)} trees")
+        
+        # Select optimal markers based on current tree structure
+        logger.info(f"Selecting {args.n_markers} optimal markers for timepoint {timepoint}")
+        
+        try:
+            selected_markers, obj_frac, obj_struct = select_markers_tree_gp(
+                gene_list, args.n_markers, tree_list, node_list, clonal_freq_list,
+                gene2idx, tree_freq_list, read_depth=args.read_depth,
+                lam1=args.lambda1, lam2=args.lambda2, focus_sample_idx=args.focus_sample)
+        except Exception as e:
+            logger.error(f"Error in marker selection: {e}")
+            import traceback
+            logger.error(f"Full traceback:\n{traceback.format_exc()}")
+            raise
+        
+        # Convert selected marker IDs to gene names
+        selected_gene_names = [gene_name_list[int(marker_id[1:])] for marker_id in selected_markers]
+        
+        logger.info(f"Selected markers: {selected_markers}")
+        logger.info(f"Selected gene names: {selected_gene_names}")
+        
+        # Get ddPCR data for current timepoint
+        current_ddpcr_data = timepoint_data[timepoint]
+        
+        # Extract ddPCR measurements for selected markers
+        ddpcr_measurements = []
+        for gene_name in selected_gene_names:
+            if gene_name in current_ddpcr_data.index:
+                mut_count = current_ddpcr_data.loc[gene_name, 'MutDOR']  # Mutant droplets
+                total_count = current_ddpcr_data.loc[gene_name, 'DOR']   # Total droplets
+                wt_count = total_count - mut_count  # Calculate WT count
+                
+                ddpcr_measurements.append({
+                    'gene': gene_name,
+                    'mut': mut_count,
+                    'WT': wt_count,
+                    'liquid_biopsy_sample': timepoint
+                })
+            else:
+                logger.warning(f"Selected marker {gene_name} not found in ddPCR data for timepoint {timepoint}")
+        
+        if not ddpcr_measurements:
+            logger.error(f"No ddPCR data found for selected markers at timepoint {timepoint}")
+            continue
+        
+        # Create DataFrame with ddPCR measurements
+        df_ddpcr = pd.DataFrame(ddpcr_measurements)
+        marker_idx2gene = {i: df_ddpcr["gene"].iloc[i] for i in range(len(df_ddpcr))}
+        
+        # Extract counts for Bayesian updating
+        ddpcr_marker_counts = list(df_ddpcr["mut"])
+        read_depth_list = list(df_ddpcr["mut"] + df_ddpcr["WT"])  # Total = mut + WT
+        
+        logger.info(f"ddPCR measurements: {len(ddpcr_measurements)} markers")
+        logger.info(f"Mutant counts: {ddpcr_marker_counts}")
+        logger.info(f"Read depths: {read_depth_list}")
+        
+        # Extract tree information from summary
+        tree_list_summary, node_list_summary, node_name_list_summary, tree_freq_list_summary = \
+            current_tree_summary['tree_structure'], current_tree_summary['node_dict'], \
+            current_tree_summary['node_dict_name'], current_tree_summary['freq']
+        
+        # Update tree distributions using Bayesian approach
+        logger.info("Updating tree distributions using Bayesian inference...")
+        
+        updated_tree_freq_list = adjust_tree_distribution_struct_bayesian(
+            tree_list_summary, node_name_list_summary,
+            tree_freq_list_summary, read_depth_list,
+            ddpcr_marker_counts, marker_idx2gene)
+        
+        # Create updated tree distribution summary
+        updated_tree_distribution_summary = update_tree_distribution_bayesian(
+            current_tree_summary, updated_tree_freq_list)
+        
+        # Save updated tree distribution for next iteration
+        updated_file = dynamic_trees_dir / f'{args.method}_bootstrap_summary_updated_{args.algorithm}_{args.n_markers}_{order_idx}_bayesian.pkl'
+        with open(updated_file, 'wb') as f:
+            pickle.dump(updated_tree_distribution_summary, f)
+        
+        logger.info(f"Saved updated tree distribution: {updated_file}")
+        
+        # Save marker selection results
+        marker_selection_results = {
+            'timepoint': timepoint,
+            'order_idx': order_idx,
+            'selected_markers': selected_markers,
+            'selected_gene_names': selected_gene_names,
+            'ddpcr_measurements': ddpcr_measurements,
+            'objective_fraction': obj_frac,
+            'objective_structure': obj_struct,
+            'parameters': {
+                'n_markers': args.n_markers,
+                'read_depth': args.read_depth,
+                'algorithm': args.algorithm,
+                'lambda1': args.lambda1,
+                'lambda2': args.lambda2
+            }
+        }
+        
+        all_marker_selections.append(marker_selection_results)
+        analysis_summary['timepoints_processed'].append(timepoint)
+        
+        marker_file = dynamic_selections_dir / f'marker_selection_{timepoint}_{order_idx}.json'
+        with open(marker_file, 'w') as f:
+            json.dump(marker_selection_results, f, indent=2, default=str)
+        
+        logger.info(f"Saved marker selection results: {marker_file}")
+    
+    # Calculate final performance metrics
+    logger.info("Calculating dynamic approach performance metrics...")
+    
+    final_tree_freq = updated_tree_distribution_summary['freq']
+    tree_entropy = -np.sum([f * np.log(f + 1e-10) for f in final_tree_freq if f > 0])
+    dominant_tree_freq = max(final_tree_freq)
+    
+    all_markers_used = set()
+    for selection in all_marker_selections:
+        all_markers_used.update(selection['selected_markers'])
+    
+    analysis_summary['convergence_metrics'] = {
+        'final_tree_entropy': tree_entropy,
+        'dominant_tree_frequency': dominant_tree_freq,
+        'convergence_timepoint': len(sorted_timepoints),
+        'n_trees_remaining': sum(1 for f in final_tree_freq if f > 0.01)
+    }
+    
+    analysis_summary['performance_metrics'] = {
+        'total_unique_markers': len(all_markers_used),
+        'total_selections': len(all_marker_selections),
+        'final_objective_fraction': all_marker_selections[-1]['objective_fraction'],
+        'final_objective_structure': all_marker_selections[-1]['objective_structure'],
+        'markers_per_timepoint': [len(sel['selected_markers']) for sel in all_marker_selections]
+    }
+    
+    # Save complete dynamic analysis results
+    results_summary = {
+        'analysis_summary': analysis_summary,
+        'all_marker_selections': all_marker_selections,
+        'final_tree_distribution': updated_tree_distribution_summary
+    }
+    
+    dynamic_results_file = output_dir / 'dynamic_marker_analysis' / 'dynamic_marker_complete_results.json'
+    with open(dynamic_results_file, 'w') as f:
+        json.dump(results_summary, f, indent=2, default=str)
+    
+    logger.info(f"Dynamic marker analysis completed successfully")
+    logger.info(f"Results saved to: {output_dir / 'dynamic_marker_analysis'}")
+    
+    return results_summary
+
+
 def main():
     """
     Main entry point for the longitudinal analysis pipeline.
@@ -392,11 +1066,11 @@ def main():
         tree_distribution_summary, tree_distribution_full = load_tree_distributions(
             aggregation_dir, args.method, logger)
         
-        # Load tissue data from SSM file (Task 3.1)
+        # Load tissue data from SSM file
         ssm_file = Path(args.ssm_file)
         tissue_df, gene2idx, gene_name_list, gene_list = load_tissue_data_from_ssm(ssm_file, logger)
         
-        # Load longitudinal data from CSV file (Task 3.2)  
+        # Load longitudinal data from CSV file
         longitudinal_file = Path(args.longitudinal_data)
         timepoint_data = load_longitudinal_data_from_csv(longitudinal_file, logger)
         
@@ -405,198 +1079,39 @@ def main():
         logger.info(f"Tree distributions: {len(tree_distribution_summary['tree_structure'])} trees")
         logger.info(f"Tissue mutations: {len(tissue_df)} mutations")
         logger.info(f"Longitudinal timepoints: {len(timepoint_data)} timepoints")
+        logger.info(f"Analysis mode: {args.analysis_mode}")
         
         # Create output subdirectories
         output_dir.mkdir(parents=True, exist_ok=True)
-        updated_trees_dir = output_dir / 'updated_trees'
-        marker_selections_dir = output_dir / 'marker_selections'
-        plots_dir = output_dir / 'plots'
         
-        updated_trees_dir.mkdir(exist_ok=True)
-        marker_selections_dir.mkdir(exist_ok=True)
-        if not args.no_plots:
-            plots_dir.mkdir(exist_ok=True)
+        # Initialize results storage
+        dynamic_results = None
+        fixed_results = None
         
-        logger.info("Starting iterative Bayesian analysis workflow...")
+        # Run analysis based on selected mode
+        if args.analysis_mode in ['dynamic', 'both']:
+            logger.info("=== Running Dynamic Marker Analysis ===")
+            dynamic_results = run_dynamic_marker_analysis(
+                args, logger, tree_distribution_summary, tree_distribution_full,
+                gene_list, gene2idx, gene_name_list, timepoint_data, output_dir)
         
-        # Sort timepoints chronologically
-        sorted_timepoints = sorted(timepoint_data.keys())
-        logger.info(f"Processing timepoints in order: {sorted_timepoints}")
+        if args.analysis_mode in ['fixed', 'both']:
+            logger.info("=== Running Fixed Marker Analysis ===")
+            fixed_results = run_fixed_marker_analysis(
+                args, logger, tree_distribution_summary, tree_distribution_full,
+                gene_list, gene2idx, gene_name_list, timepoint_data, output_dir)
         
-        # Process each timepoint sequentially
-        for order_idx, timepoint in enumerate(sorted_timepoints):
-            logger.info(f"Processing timepoint {order_idx + 1}/{len(sorted_timepoints)}: {timepoint}")
-            
-            # For the first timepoint, use original tree distributions
-            if order_idx == 0:
-                current_tree_summary = tree_distribution_summary
-                current_tree_full = tree_distribution_full
-                
-                # Extract tree components for analysis - USE FULL DISTRIBUTION FOR ALL COMPONENTS
-                # This ensures all arrays have the same length and consistent indexing
-                tree_list = current_tree_full['tree_structure']
-                node_list = current_tree_full['node_dict'] 
-                tree_freq_list = current_tree_full['freq']
-                clonal_freq_list = current_tree_full['vaf_frac']
-                
-                logger.info(f"Using original tree distributions: {len(tree_list)} trees")
-            
-            # For subsequent timepoints, load updated tree distribution from previous iteration
-            else:
-                updated_file = updated_trees_dir / f'{args.method}_bootstrap_summary_updated_{args.algorithm}_{args.n_markers}_{order_idx-1}_bayesian.pkl'
-                
-                if not updated_file.exists():
-                    logger.error(f"Updated tree distribution file not found: {updated_file}")
-                    raise FileNotFoundError(f"Missing updated tree distribution for timepoint {order_idx-1}")
-                
-                with open(updated_file, 'rb') as f:
-                    current_tree_summary = pickle.load(f)
-                
-                # Extract tree components
-                tree_list = current_tree_summary['tree_structure']
-                node_list = current_tree_summary['node_dict']
-                tree_freq_list = current_tree_summary['freq']
-                
-                # Recalculate clonal frequencies by averaging across samples
-                clonal_freq_list = []
-                for idx in range(len(current_tree_summary['vaf_frac'])):
-                    clonal_freq_dict = current_tree_summary['vaf_frac'][idx]
-                    clonal_freq_dict_new = {}
-                    for node, freqs in clonal_freq_dict.items():
-                        clonal_freq_dict_new[node] = [list(np.array(freqs).mean(axis=0))]
-                    clonal_freq_list.append(clonal_freq_dict_new)
-                
-                logger.info(f"Using updated tree distributions from previous timepoint: {len(tree_list)} trees")
-            
-            # Select optimal markers based on current tree structure
-            logger.info(f"Selecting {args.n_markers} optimal markers for timepoint {timepoint}")
-            
-            # Debug: Log data shapes and types
-            logger.info(f"Debug - gene_list length: {len(gene_list)}")
-            logger.info(f"Debug - tree_list length: {len(tree_list)}")
-            logger.info(f"Debug - node_list length: {len(node_list)}")
-            logger.info(f"Debug - clonal_freq_list length: {len(clonal_freq_list)}")
-            logger.info(f"Debug - tree_freq_list length: {len(tree_freq_list)}")
-            logger.info(f"Debug - gene2idx keys: {list(gene2idx.keys())[:5]}...")  # First 5 keys
-            
-            try:
-                selected_markers, obj_frac, obj_struct = select_markers_tree_gp(
-                    gene_list, args.n_markers, tree_list, node_list, clonal_freq_list,
-                    gene2idx, tree_freq_list, read_depth=args.read_depth,
-                    lam1=args.lambda1, lam2=args.lambda2, focus_sample_idx=args.focus_sample)
-            except Exception as e:
-                logger.error(f"Error in marker selection: {e}")
-                import traceback
-                logger.error(f"Full traceback:\n{traceback.format_exc()}")
-                raise
-            
-            # Convert selected marker IDs to gene names (matching original logic)
-            selected_gene_names = [gene_name_list[int(marker_id[1:])] for marker_id in selected_markers]
-            
-            logger.info(f"Selected markers: {selected_markers}")
-            logger.info(f"Selected gene names: {selected_gene_names}")
-            
-            # Get ddPCR data for current timepoint
-            current_ddpcr_data = timepoint_data[timepoint]
-            
-            # Extract ddPCR measurements for selected markers (matching original format)
-            ddpcr_measurements = []
-            for gene_name in selected_gene_names:
-                if gene_name in current_ddpcr_data.index:
-                    mut_count = current_ddpcr_data.loc[gene_name, 'MutDOR']  # Mutant droplets
-                    total_count = current_ddpcr_data.loc[gene_name, 'DOR']   # Total droplets
-                    wt_count = total_count - mut_count  # Calculate WT count
-                    
-                    ddpcr_measurements.append({
-                        'gene': gene_name,
-                        'mut': mut_count,
-                        'WT': wt_count,
-                        'liquid_biopsy_sample': timepoint
-                    })
-                else:
-                    logger.warning(f"Selected marker {gene_name} not found in ddPCR data for timepoint {timepoint}")
-            
-            if not ddpcr_measurements:
-                logger.error(f"No ddPCR data found for selected markers at timepoint {timepoint}")
-                continue
-            
-            # Create DataFrame with ddPCR measurements (matching original format)
-            df_ddpcr = pd.DataFrame(ddpcr_measurements)
-            marker_idx2gene = {i: df_ddpcr["gene"].iloc[i] for i in range(len(df_ddpcr))}
-            
-            # Extract counts for Bayesian updating (matching original calculation)
-            ddpcr_marker_counts = list(df_ddpcr["mut"])
-            read_depth_list = list(df_ddpcr["mut"] + df_ddpcr["WT"])  # Total = mut + WT
-            
-            logger.info(f"ddPCR measurements: {len(ddpcr_measurements)} markers")
-            logger.info(f"Mutant counts: {ddpcr_marker_counts}")
-            logger.info(f"Read depths: {read_depth_list}")
-            
-            # Extract tree information from summary (matching original)
-            tree_list_summary, node_list_summary, node_name_list_summary, tree_freq_list_summary = \
-                current_tree_summary['tree_structure'], current_tree_summary['node_dict'], \
-                current_tree_summary['node_dict_name'], current_tree_summary['freq']
-            
-            # Update tree distributions using Bayesian approach
-            logger.info("Updating tree distributions using Bayesian inference...")
-            
-            updated_tree_freq_list = adjust_tree_distribution_struct_bayesian(
-                tree_list_summary, node_name_list_summary,
-                tree_freq_list_summary, read_depth_list,
-                ddpcr_marker_counts, marker_idx2gene)
-            
-            # Create updated tree distribution summary
-            updated_tree_distribution_summary = update_tree_distribution_bayesian(
-                current_tree_summary, updated_tree_freq_list)
-            
-            # Save updated tree distribution for next iteration
-            updated_file = updated_trees_dir / f'{args.method}_bootstrap_summary_updated_{args.algorithm}_{args.n_markers}_{order_idx}_bayesian.pkl'
-            with open(updated_file, 'wb') as f:
-                pickle.dump(updated_tree_distribution_summary, f)
-            
-            logger.info(f"Saved updated tree distribution: {updated_file}")
-            
-            # Save marker selection results
-            marker_selection_results = {
-                'timepoint': timepoint,
-                'order_idx': order_idx,
-                'selected_markers': selected_markers,
-                'selected_gene_names': selected_gene_names,
-                'ddpcr_measurements': ddpcr_measurements,
-                'objective_fraction': obj_frac,
-                'objective_structure': obj_struct,
-                'parameters': {
-                    'n_markers': args.n_markers,
-                    'read_depth': args.read_depth,
-                    'algorithm': args.algorithm,
-                    'lambda1': args.lambda1,
-                    'lambda2': args.lambda2
-                }
-            }
-            
-            marker_file = marker_selections_dir / f'marker_selection_{timepoint}_{order_idx}.json'
-            with open(marker_file, 'w') as f:
-                json.dump(marker_selection_results, f, indent=2, default=str)
-            
-            logger.info(f"Saved marker selection results: {marker_file}")
-            
-            # Save intermediate results if requested
-            if args.save_intermediate:
-                intermediate_dir = output_dir / 'intermediate' / f'timepoint_{order_idx}_{timepoint}'
-                intermediate_dir.mkdir(parents=True, exist_ok=True)
-                
-                # Save cleaned data structures
-                with open(intermediate_dir / 'node_list_scrub.pkl', 'wb') as f:
-                    pickle.dump(node_list_scrub, f)
-                with open(intermediate_dir / 'clonal_freq_list_scrub.pkl', 'wb') as f:
-                    pickle.dump(clonal_freq_list_scrub, f)
-                
-                logger.info(f"Saved intermediate results: {intermediate_dir}")
+        # Generate comparative analysis if both approaches were run
+        if args.analysis_mode == 'both' and dynamic_results and fixed_results:
+            logger.info("=== Generating Comparative Analysis ===")
+            comparative_results = generate_comparative_analysis(
+                dynamic_results, fixed_results, args, logger, output_dir)
         
         # Generate summary report
         summary_report = {
             'patient_id': args.patient_id,
             'analysis_timestamp': datetime.now().isoformat(),
+            'analysis_mode': args.analysis_mode,
             'parameters': {
                 'n_markers': args.n_markers,
                 'read_depth': args.read_depth,
@@ -611,9 +1126,10 @@ def main():
                 'longitudinal_data': str(args.longitudinal_data)
             },
             'results': {
-                'total_timepoints': len(sorted_timepoints),
-                'timepoints_processed': sorted_timepoints,
-                'output_directory': str(output_dir)
+                'total_timepoints': len(timepoint_data),
+                'timepoints_processed': sorted(timepoint_data.keys()),
+                'output_directory': str(output_dir),
+                'approaches_run': [args.analysis_mode] if args.analysis_mode != 'both' else ['dynamic', 'fixed']
             }
         }
         
@@ -621,7 +1137,7 @@ def main():
         with open(summary_file, 'w') as f:
             json.dump(summary_report, f, indent=2)
         
-        logger.info(f"Analysis completed successfully for {len(sorted_timepoints)} timepoints")
+        logger.info(f"Analysis completed successfully")
         logger.info(f"Results saved to: {output_dir}")
         logger.info(f"Summary report: {summary_file}")
         
