@@ -1103,24 +1103,25 @@ def main():
     Main entry point for the longitudinal analysis pipeline.
     Now uses YAML configuration files for cleaner parameter management.
     """
+    # Initialize a basic logger for early error handling
+    logger = logging.getLogger('main_pipeline')
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
+    
     try:
         # Parse command line arguments (now just config file and overrides)
         cmd_args = parse_args()
         
         # Load configuration from YAML file
-        logger_temp = logging.getLogger('config_loader')
-        logger_temp.setLevel(logging.INFO)
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-        logger_temp.addHandler(handler)
-        
-        logger_temp.info(f"Loading configuration from: {cmd_args.config}")
+        logger.info(f"Loading configuration from: {cmd_args.config}")
         config = load_config(cmd_args.config)
         
         # Convert config to args namespace for compatibility with existing code
         args = config_to_args(config, cmd_args)
         
-        # Set up output directory and logging
+        # Set up output directory and proper logging (replaces the basic logger)
         output_dir = Path(args.output_dir)
         logger = setup_logging(output_dir, args.patient_id)
         
@@ -1233,7 +1234,13 @@ def main():
         
     except Exception as e:
         logger.error(f"Pipeline failed with error: {e}")
-        if args.debug:
+        # Check if args exists and has debug flag before trying to use it
+        try:
+            if 'args' in locals() and hasattr(args, 'debug') and args.debug:
+                import traceback
+                logger.error(f"Full traceback:\n{traceback.format_exc()}")
+        except:
+            # If we can't check debug mode, just show the traceback anyway for config errors
             import traceback
             logger.error(f"Full traceback:\n{traceback.format_exc()}")
         sys.exit(1)
