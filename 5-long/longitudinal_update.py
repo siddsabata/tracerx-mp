@@ -383,7 +383,6 @@ def load_tissue_data_from_ssm(ssm_file: Path, logger: logging.Logger) -> Tuple[p
     
     # Create gene list and mapping from tissue data
     gene_list = [f's{idx}' for idx in range(len(tissue_df))]  # Format as 's0', 's1', etc.
-    gene2idx = {gene_id: idx for idx, gene_id in enumerate(gene_list)}
     
     # Process gene names with duplicate handling (matching original logic)
     gene_name_list = []
@@ -405,6 +404,9 @@ def load_tissue_data_from_ssm(ssm_file: Path, logger: logging.Logger) -> Tuple[p
             gene = f"unknown_{tissue_df.iloc[i]['id']}"
         
         gene_name_list.append(gene)
+    
+    # Create mapping from actual gene names to indices (this was the bug!)
+    gene2idx = {gene_name: idx for idx, gene_name in enumerate(gene_name_list)}
     
     logger.info(f"Created gene list: {len(gene_list)} genes in 's0', 's1'... format")
     logger.info(f"Processed gene names: {len(gene_name_list)} names with duplicate handling")
