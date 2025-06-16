@@ -769,10 +769,20 @@ def run_fixed_marker_analysis(args: argparse.Namespace, logger: logging.Logger,
     }
     
     # Step 4: Save comprehensive results
+    
+    # Save final tree distribution separately as pickle (like iterative_pipeline_real.py)
+    # This handles tuple keys properly since pickle can serialize them
+    final_tree_file = fixed_trees_dir / f'{args.method}_bootstrap_summary_final_fixed_{args.n_markers}_bayesian.pkl'
+    with open(final_tree_file, 'wb') as f:
+        pickle.dump(current_tree_summary, f)
+    
+    logger.info(f"Saved final tree distribution: {final_tree_file}")
+    
+    # Create JSON-safe results summary (exclude tree distribution with tuple keys)
     results_summary = {
         'analysis_summary': analysis_summary,
         'all_tracking_results': all_tracking_results,
-        'final_tree_distribution': current_tree_summary
+        'final_tree_distribution_file': str(final_tree_file)  # Reference to pickle file instead of data
     }
     
     # Save complete fixed marker analysis results
@@ -853,6 +863,10 @@ def generate_comparative_analysis(dynamic_results: Dict, fixed_results: Dict,
         'comparative_metrics': comparative_metrics,
         'dynamic_summary': dynamic_summary,
         'fixed_summary': fixed_summary,
+        'tree_distribution_files': {
+            'dynamic_final_trees': dynamic_results.get('final_tree_distribution_file', 'not_available'),
+            'fixed_final_trees': fixed_results.get('final_tree_distribution_file', 'not_available')
+        },
         'recommendations': {
             'research_use': 'dynamic' if comparative_metrics['convergence_comparison']['dynamic_final_entropy'] < 
                           comparative_metrics['convergence_comparison']['fixed_final_entropy'] else 'fixed',
@@ -1084,10 +1098,20 @@ def run_dynamic_marker_analysis(args: argparse.Namespace, logger: logging.Logger
     }
     
     # Save complete dynamic analysis results
+    
+    # Save final tree distribution separately as pickle (like iterative_pipeline_real.py)
+    # This handles tuple keys properly since pickle can serialize them
+    final_tree_file = dynamic_trees_dir / f'{args.method}_bootstrap_summary_final_dynamic_{args.n_markers}_bayesian.pkl'
+    with open(final_tree_file, 'wb') as f:
+        pickle.dump(updated_tree_distribution_summary, f)
+    
+    logger.info(f"Saved final tree distribution: {final_tree_file}")
+    
+    # Create JSON-safe results summary (exclude tree distribution with tuple keys)
     results_summary = {
         'analysis_summary': analysis_summary,
         'all_marker_selections': all_marker_selections,
-        'final_tree_distribution': updated_tree_distribution_summary
+        'final_tree_distribution_file': str(final_tree_file)  # Reference to pickle file instead of data
     }
     
     dynamic_results_file = output_dir / 'dynamic_marker_analysis' / 'dynamic_marker_complete_results.json'

@@ -48,12 +48,41 @@ The enhancement phase focused on **improving existing pipeline capabilities** an
    - Production-ready SLURM script with clinical gene specifications
    - Comparative analysis between dynamic and fixed approaches
 
+5. **YAML Configuration System**: ✅ **COMPLETED**
+   - **Migrated from command-line arguments to YAML configuration files**
+   - **Resolved shell argument parsing issues with mutation names containing '>' characters**
+   - **Implemented robust configuration loading and validation**
+   - **Created production-ready configuration templates**
+   - **Fixed marker validation and gene mapping issues**
+   - **Resolved numerical overflow problems in Bayesian tree updating**
+
+### Recent Major Achievements (Latest Development Phase) ✅ COMPLETED
+
+#### YAML Configuration System Implementation
+- ✅ **Complete migration from command-line arguments to YAML configuration**
+- ✅ **Resolved shell parsing issues**: Fixed problems with mutation names containing special characters (`>`)
+- ✅ **Configuration validation**: Robust YAML loading with comprehensive error handling
+- ✅ **Template creation**: Production-ready configuration files for different analysis scenarios
+- ✅ **Logger initialization fix**: Resolved UnboundLocalError in error handling
+
+#### Marker Validation System Fixes
+- ✅ **Gene mapping correction**: Fixed critical bug in `gene2idx` mapping that prevented marker validation
+- ✅ **Marker identification**: Resolved issue where user-specified markers weren't found in dataset
+- ✅ **Validation logic enhancement**: Improved marker validation with clear success/failure reporting
+- ✅ **Error handling**: Graceful handling of missing markers with informative feedback
+
+#### Numerical Stability Improvements
+- ✅ **Overflow protection**: Implemented log-space arithmetic for large read depths (60,000+)
+- ✅ **Binomial coefficient handling**: Used `scipy.special.gammaln` to prevent factorial overflow
+- ✅ **Multiple fallback strategies**: Normal approximation, error bounds, and graceful degradation
+- ✅ **Integration robustness**: Enhanced numerical integration with improved tolerances
+
 ### Future Development (Clinical Integration Phase)
 The next major phase will focus on **clinical deployment and validation**:
-1. SLURM integration for longitudinal workflows
-2. Enhanced visualization for temporal data
-3. Clinical protocol standardization
-4. Validation studies with real patient cohorts
+1. Enhanced visualization for temporal data
+2. Clinical protocol standardization
+3. Validation studies with real patient cohorts
+4. Advanced time series analysis and reporting
 
 This multi-phase approach ensures a solid, well-tested foundation with comprehensive longitudinal functionality ready for clinical deployment.
 
@@ -93,10 +122,12 @@ tracerx-mp/
 │   ├── longitudinal_update.py        # Main longitudinal analysis implementation (UPDATED)
 │   ├── longitudinal_analysis.sh      # SLURM script for dynamic marker analysis
 │   ├── longitudinal_analysis_fixed.sh # SLURM script for fixed marker analysis (NEW)
+│   ├── longitudinal_yaml_analysis.sh  # SLURM script with YAML configuration support
 │   ├── adjust_tree_distribution.py   # Bayesian tree updating algorithms
 │   ├── optimize_fraction.py          # Marker optimization for longitudinal tracking
 │   ├── optimize.py                   # Tree structure optimization utilities
-│   └── analyze.py                    # Analysis and tree processing utilities
+│   ├── analyze.py                    # Analysis and tree processing utilities
+│   └── configs/                    # YAML configuration directory with templates for different analysis scenarios
 └── data/                    # Input data directory containing sample SSM files
     ├── ssm.txt              # Sample somatic mutation data for patient CRUK0044
     └── ssm_subset.txt       # Subset with key mutations for testing 
@@ -249,18 +280,21 @@ This resolves data consistency issues between SSM input and tree distribution da
 ### 6. Longitudinal Analysis Stage (`5-long/`) ✅ **ENHANCED**
 - **Purpose**: Implements iterative Bayesian tree updating using blood sample data over time with **both dynamic and fixed marker approaches**
 - **Components**:
-  - `longitudinal_update.py`: **Enhanced** main longitudinal analysis implementation
+  - `longitudinal_update.py`: **Enhanced** main longitudinal analysis implementation with **YAML configuration support**
   - `longitudinal_analysis.sh`: SLURM script for dynamic marker analysis
   - `longitudinal_analysis_fixed.sh`: **NEW** SLURM script for fixed marker analysis
-  - `adjust_tree_distribution.py`: Bayesian tree updating algorithms
+  - `longitudinal_yaml_analysis.sh`: **NEW** SLURM script with YAML configuration support
+  - `adjust_tree_distribution.py`: Bayesian tree updating algorithms **with numerical stability fixes**
   - `optimize_fraction.py`: Marker optimization for longitudinal tracking
   - `optimize.py`: Tree structure optimization utilities
   - `analyze.py`: Analysis and tree processing utilities
+  - `configs/`: **NEW** YAML configuration directory with templates for different analysis scenarios
 - **Inputs**:
+  - **YAML configuration files**: Replace complex command-line arguments with structured configuration
   - Tree distribution files from aggregation stage (`phylowgs_bootstrap_summary.pkl`, `phylowgs_bootstrap_aggregation.pkl`)
   - Patient tissue data (SSM format)
   - Longitudinal blood sample data (CSV format with ddPCR measurements)
-  - **NEW**: User-specified fixed markers for clinical workflows
+  - User-specified fixed markers for clinical workflows
   - Updated tree distributions from previous timepoints (iterative)
 - **Outputs**:
   - **Dynamic approach**: Updated tree distributions with optimally selected markers per timepoint
@@ -270,40 +304,45 @@ This resolves data consistency issues between SSM input and tree distribution da
   - Selected marker recommendations for ddPCR assays
 - **Dependencies**: 
   - Python 3.x with advanced scientific libraries
+  - **PyYAML**: For configuration file processing
   - Gurobi optimization solver (requires license)
   - External ddPCR data from clinical laboratory
 
-#### **Enhanced Longitudinal Analysis Workflow**
-The longitudinal stage now implements **dual-mode computational-clinical feedback loops**:
+#### **Recent Major Enhancements**
 
-**Dynamic Marker Approach (Research-Focused)**:
-1. **Adaptive Selection**: Algorithmically selects optimal markers at each timepoint
-2. **Maximum Information**: Optimizes for maximum discriminatory power
-3. **Research Applications**: Method development and tumor dynamics understanding
+**YAML Configuration System**:
+```yaml
+# Example: configs/cruk0044_fixed_markers.yaml
+patient_id: "CRUK0044"
+analysis_mode: "fixed"
+input_files:
+  ssm_file: "/path/to/data/ssm.txt"
+  longitudinal_data: "/path/to/data/cruk0044_liquid.csv"
+  aggregation_dir: "/path/to/aggregation_results/"
+fixed_markers:
+  - "DLG2_11_83544685_T>A"
+  - "GPR65_14_88477948_G>T"
+  - "C12orf74_12_93100715_G>T"
+parameters:
+  n_markers: 5
+  read_depth: 90000
+```
 
-**Fixed Marker Approach (Clinical-Focused)**:
-1. **Clinician-Specified**: Uses markers specified by clinical teams
-2. **Consistent Tracking**: Same markers across all timepoints
-3. **Clinical Applications**: Standardized monitoring and treatment response assessment
+**Resolved Technical Issues**:
+- ✅ **Shell parsing**: Fixed truncation of mutation names containing `>` characters
+- ✅ **Marker validation**: Corrected `gene2idx` mapping to properly identify user-specified markers
+- ✅ **Numerical overflow**: Implemented log-space arithmetic for large read depths (60,000+)
+- ✅ **Error handling**: Robust configuration validation and meaningful error messages
+- ✅ **Logger initialization**: Fixed UnboundLocalError in exception handling
 
-**Command Line Interface**:
+**Enhanced Command Line Interface**:
 ```bash
-# Dynamic marker analysis
-python longitudinal_update.py PATIENT_ID \
-    --analysis-mode dynamic \
-    --n-markers 3 \
-    [other parameters...]
+# YAML-based execution (recommended)
+python longitudinal_update.py --config configs/cruk0044_fixed_markers.yaml
 
-# Fixed marker analysis with user-specified markers
+# Legacy command-line support maintained
 python longitudinal_update.py PATIENT_ID \
     --analysis-mode fixed \
-    --fixed-markers TP53 KRAS PIK3CA EGFR BRAF \
-    [other parameters...]
-
-# Comparative analysis (both approaches)
-python longitudinal_update.py PATIENT_ID \
-    --analysis-mode both \
-    --n-markers 3 \
     --fixed-markers TP53 KRAS PIK3CA \
     [other parameters...]
 ```
