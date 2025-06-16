@@ -40,7 +40,7 @@ READ_DEPTH=${7:-90000} # Default to 90000 if not provided
 ADDITIONAL_FLAGS=${8:-""} # Optional additional flags
 
 # Fixed markers - these are the clinically specified genes
-FIXED_MARKERS="DLG2 GPR65 C12orf74 CSMD1 OR51D1"
+FIXED_MARKERS="DLG2_11_83544685_T>A GPR65_14_88477948_G>T C12orf74_12_93100715_G>T CSMD1_8_2975974_G>T OR51D1_11_4661941_G>T"
 
 # Validate required input files and directories
 if [ ! -d "$AGGREGATION_DIR" ]; then
