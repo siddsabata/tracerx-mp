@@ -17,4 +17,4 @@ dependencies:
   - ete3
   - lxml  # required by ete3
   - gurobi=11.0.2
-  - yaml
+  - pyyaml
