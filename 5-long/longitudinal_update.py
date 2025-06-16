@@ -29,6 +29,7 @@ import os
 import sys
 import pickle
 import json
+import yaml
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional, Any
@@ -80,9 +81,72 @@ def setup_logging(output_dir: Path, patient_id: str) -> logging.Logger:
     return logger
 
 
+def load_config(config_path: str) -> Dict:
+    """
+    Load configuration from YAML file.
+    
+    Args:
+        config_path: Path to YAML configuration file
+        
+    Returns:
+        Dictionary containing configuration parameters
+    """
+    try:
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+        
+        # Validate required sections
+        required_sections = ['patient_id', 'analysis_mode', 'input_files', 'output']
+        for section in required_sections:
+            if section not in config:
+                raise ValueError(f"Missing required configuration section: {section}")
+        
+        # Validate required input files
+        required_inputs = ['aggregation_dir', 'ssm_file', 'longitudinal_data', 'code_dir']
+        for input_key in required_inputs:
+            if input_key not in config['input_files']:
+                raise ValueError(f"Missing required input file configuration: {input_key}")
+        
+        # Set defaults for optional sections
+        if 'parameters' not in config:
+            config['parameters'] = {}
+        if 'fixed_markers' not in config:
+            config['fixed_markers'] = []
+        if 'filtering' not in config:
+            config['filtering'] = {'timepoints': []}
+        if 'visualization' not in config:
+            config['visualization'] = {'generate_plots': True, 'plot_format': 'png', 'save_intermediate': False}
+        if 'validation' not in config:
+            config['validation'] = {'validate_inputs': True, 'debug_mode': False}
+        
+        # Set parameter defaults
+        param_defaults = {
+            'n_markers': 2,
+            'read_depth': 90000,
+            'method': 'phylowgs',
+            'lambda1': 0.0,  # Weight for fraction-based objective
+            'lambda2': 1.0,  # Weight for structure-based objective  
+            'focus_sample': 0
+        }
+        
+        for key, default_value in param_defaults.items():
+            if key not in config['parameters']:
+                config['parameters'][key] = default_value
+        
+        return config
+        
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
+    except yaml.YAMLError as e:
+        raise ValueError(f"Error parsing YAML configuration: {e}")
+    except Exception as e:
+        raise ValueError(f"Error loading configuration: {e}")
+
+
 def parse_args() -> argparse.Namespace:
     """
     Parse command line arguments for the longitudinal analysis pipeline.
+    Now simplified to use YAML configuration files.
     
     Returns:
         Parsed command line arguments
@@ -92,106 +156,98 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Dynamic marker selection (default)
-    python longitudinal_update.py CRUK0044 \\
-        --aggregation-dir /data/CRUK0044/initial/aggregation_results \\
-        --ssm-file /data/ssm.txt \\
-        --longitudinal-data /data/CRUK0044_longitudinal.csv \\
-        --output-dir /data/CRUK0044/longitudinal \\
-        --analysis-mode dynamic
-
-    # Fixed marker tracking with clinician-specified markers
-    python longitudinal_update.py CRUK0044 \\
-        --aggregation-dir /data/CRUK0044/initial/aggregation_results \\
-        --ssm-file /data/ssm.txt \\
-        --longitudinal-data /data/CRUK0044_longitudinal.csv \\
-        --output-dir /data/CRUK0044/longitudinal \\
-        --analysis-mode fixed \\
-        --fixed-markers TP53 KRAS PIK3CA EGFR BRAF
-
-    # Run both approaches for comparison
-    python longitudinal_update.py CRUK0044 \\
-        --aggregation-dir /data/CRUK0044/initial/aggregation_results \\
-        --ssm-file /data/ssm.txt \\
-        --longitudinal-data /data/CRUK0044_longitudinal.csv \\
-        --output-dir /data/CRUK0044/longitudinal \\
-        --analysis-mode both \\
-        --n-markers 3 \\
-        --fixed-markers TP53 KRAS PIK3CA
+    # Run analysis using YAML configuration
+    python longitudinal_update.py --config configs/cruk0044_fixed_markers.yaml
+    
+    # Run with debug mode enabled
+    python longitudinal_update.py --config configs/cruk0044_dynamic.yaml --debug
+    
+    # Override specific parameters
+    python longitudinal_update.py --config configs/cruk0044_fixed_markers.yaml --debug --no-plots
         """
     )
     
     # Required arguments
-    parser.add_argument('patient_id', type=str,
-                       help='Patient identifier (e.g., CRUK0044)')
+    parser.add_argument('-c', '--config', type=str, required=True,
+                       help='Path to YAML configuration file')
     
-    parser.add_argument('-a', '--aggregation-dir', type=str, required=True,
-                       help='Path to aggregation results directory containing tree distributions')
+    # Optional overrides
+    parser.add_argument('--debug', action='store_true',
+                       help='Enable debug logging (overrides config file setting)')
     
-    parser.add_argument('-s', '--ssm-file', type=str, required=True,
-                       help='Path to SSM file containing tissue mutation data')
-    
-    parser.add_argument('-l', '--longitudinal-data', type=str, required=True,
-                       help='Path to CSV file containing longitudinal ddPCR data')
-    
-    parser.add_argument('-o', '--output-dir', type=str, required=True,
-                       help='Output directory for longitudinal analysis results')
-    
-    # Analysis mode selection
-    parser.add_argument('-m', '--analysis-mode', type=str, 
-                       choices=['dynamic', 'fixed', 'both'], default='dynamic',
-                       help='Analysis mode: dynamic (optimal markers each timepoint), '
-                            'fixed (same markers all timepoints), or both (default: dynamic)')
-    
-    # Analysis parameters
-    parser.add_argument('-n', '--n-markers', type=int, default=2,
-                       help='Number of markers to select for dynamic mode (default: 2)')
-    
-    # Fixed marker specification
-    parser.add_argument('--fixed-markers', type=str, nargs='+',
-                       help='Gene names for fixed marker tracking (required for fixed/both modes). '
-                            'Example: --fixed-markers TP53 KRAS PIK3CA')
-    
-    parser.add_argument('-r', '--read-depth', type=int, default=90000,
-                       help='Expected read depth for ddPCR analysis (default: 90000)')
-    
-    parser.add_argument('--algorithm', type=str, choices=['struct', 'frac'], default='struct',
-                       help='Algorithm type for marker selection (default: struct)')
-    
-    parser.add_argument('--method', type=str, default='phylowgs',
-                       help='Phylogenetic method used (default: phylowgs)')
-    
-    # Optional filtering and configuration
-    parser.add_argument('-t', '--timepoints', type=str,
-                       help='Comma-separated list of timepoints to analyze (YYYY-MM-DD format). If not specified, all timepoints in data will be used.')
-    
-    parser.add_argument('--lambda1', type=float, default=0,
-                       help='Weight for tree fractions in optimization (default: 0)')
-    
-    parser.add_argument('--lambda2', type=float, default=1,
-                       help='Weight for tree distributions in optimization (default: 1)')
-    
-    parser.add_argument('--focus-sample', type=int, default=0,
-                       help='Sample index to focus on for marker selection (default: 0)')
-    
-    # Output and visualization options
     parser.add_argument('--no-plots', action='store_true',
-                       help='Skip generation of visualization plots')
-    
-    parser.add_argument('--plot-format', type=str, choices=['png', 'pdf', 'eps'], default='png',
-                       help='Output format for plots (default: png)')
+                       help='Skip generation of visualization plots (overrides config file setting)')
     
     parser.add_argument('--save-intermediate', action='store_true',
-                       help='Save intermediate results for debugging')
-    
-    # Validation and debugging
-    parser.add_argument('--validate-inputs', action='store_true', default=True,
-                       help='Validate input data compatibility (default: True)')
-    
-    parser.add_argument('--debug', action='store_true',
-                       help='Enable debug logging and save additional intermediate files')
+                       help='Save intermediate results for debugging (overrides config file setting)')
     
     return parser.parse_args()
+
+
+def config_to_args(config: Dict, cmd_args: argparse.Namespace) -> argparse.Namespace:
+    """
+    Convert configuration dictionary to argparse.Namespace object for compatibility.
+    Apply command line overrides where specified.
+    
+    Args:
+        config: Configuration dictionary from YAML
+        cmd_args: Command line arguments for overrides
+        
+    Returns:
+        Namespace object with configuration parameters
+    """
+    # Create namespace object
+    args = argparse.Namespace()
+    
+    # Basic configuration
+    args.patient_id = config['patient_id']
+    args.analysis_mode = config['analysis_mode']
+    
+    # Input files
+    args.aggregation_dir = config['input_files']['aggregation_dir']
+    args.ssm_file = config['input_files']['ssm_file']
+    args.longitudinal_data = config['input_files']['longitudinal_data']
+    args.code_dir = config['input_files']['code_dir']
+    
+    # Output configuration
+    args.output_dir = config['output']['base_dir']
+    
+    # Analysis parameters
+    params = config['parameters']
+    args.n_markers = params['n_markers']
+    args.read_depth = params['read_depth']
+    args.method = params['method']
+    args.lambda1 = params['lambda1']
+    args.lambda2 = params['lambda2']
+    args.focus_sample = params['focus_sample']
+    
+    # Fixed markers
+    args.fixed_markers = config.get('fixed_markers', [])
+    
+    # Filtering
+    timepoints_str = config['filtering'].get('timepoints', [])
+    args.timepoints = ','.join(timepoints_str) if timepoints_str else None
+    
+    # Visualization options
+    viz = config['visualization']
+    args.no_plots = not viz.get('generate_plots', True)
+    args.plot_format = viz.get('plot_format', 'png')
+    args.save_intermediate = viz.get('save_intermediate', False)
+    
+    # Validation and debugging
+    val = config['validation']
+    args.validate_inputs = val.get('validate_inputs', True)
+    args.debug = val.get('debug_mode', False)
+    
+    # Apply command line overrides
+    if cmd_args.debug:
+        args.debug = True
+    if cmd_args.no_plots:
+        args.no_plots = True
+    if cmd_args.save_intermediate:
+        args.save_intermediate = True
+    
+    return args
 
 
 def validate_input_files(args: argparse.Namespace, logger: logging.Logger) -> bool:
@@ -571,7 +627,6 @@ def process_fixed_marker_timepoint(timepoint: str, order_idx: int, fixed_markers
         'parameters': {
             'n_markers': args.n_markers,
             'read_depth': args.read_depth,
-            'algorithm': args.algorithm,
             'lambda1': args.lambda1,
             'lambda2': args.lambda2
         }
@@ -869,7 +924,7 @@ def run_dynamic_marker_analysis(args: argparse.Namespace, logger: logging.Logger
         
         # For subsequent timepoints, load updated tree distribution from previous iteration
         else:
-            updated_file = dynamic_trees_dir / f'{args.method}_bootstrap_summary_updated_{args.algorithm}_{args.n_markers}_{order_idx-1}_bayesian.pkl'
+            updated_file = dynamic_trees_dir / f'{args.method}_bootstrap_summary_updated_{args.n_markers}_{order_idx-1}_bayesian.pkl'
             
             if not updated_file.exists():
                 logger.error(f"Updated tree distribution file not found: {updated_file}")
@@ -968,7 +1023,7 @@ def run_dynamic_marker_analysis(args: argparse.Namespace, logger: logging.Logger
             current_tree_summary, updated_tree_freq_list)
         
         # Save updated tree distribution for next iteration
-        updated_file = dynamic_trees_dir / f'{args.method}_bootstrap_summary_updated_{args.algorithm}_{args.n_markers}_{order_idx}_bayesian.pkl'
+        updated_file = dynamic_trees_dir / f'{args.method}_bootstrap_summary_updated_{args.n_markers}_{order_idx}_bayesian.pkl'
         with open(updated_file, 'wb') as f:
             pickle.dump(updated_tree_distribution_summary, f)
         
@@ -986,7 +1041,6 @@ def run_dynamic_marker_analysis(args: argparse.Namespace, logger: logging.Logger
             'parameters': {
                 'n_markers': args.n_markers,
                 'read_depth': args.read_depth,
-                'algorithm': args.algorithm,
                 'lambda1': args.lambda1,
                 'lambda2': args.lambda2
             }
@@ -1047,15 +1101,50 @@ def run_dynamic_marker_analysis(args: argparse.Namespace, logger: logging.Logger
 def main():
     """
     Main entry point for the longitudinal analysis pipeline.
+    Now uses YAML configuration files for cleaner parameter management.
     """
-    # Parse command line arguments
-    args = parse_args()
-    
-    # Set up output directory and logging
-    output_dir = Path(args.output_dir)
-    logger = setup_logging(output_dir, args.patient_id)
-    
     try:
+        # Parse command line arguments (now just config file and overrides)
+        cmd_args = parse_args()
+        
+        # Load configuration from YAML file
+        logger_temp = logging.getLogger('config_loader')
+        logger_temp.setLevel(logging.INFO)
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        logger_temp.addHandler(handler)
+        
+        logger_temp.info(f"Loading configuration from: {cmd_args.config}")
+        config = load_config(cmd_args.config)
+        
+        # Convert config to args namespace for compatibility with existing code
+        args = config_to_args(config, cmd_args)
+        
+        # Set up output directory and logging
+        output_dir = Path(args.output_dir)
+        logger = setup_logging(output_dir, args.patient_id)
+        
+        logger.info("=== Longitudinal Cancer Evolution Analysis Pipeline ===")
+        logger.info(f"Configuration file: {cmd_args.config}")
+        logger.info(f"Patient ID: {args.patient_id}")
+        logger.info(f"Analysis mode: {args.analysis_mode}")
+        logger.info(f"Output directory: {output_dir}")
+        
+        # Log configuration summary
+        logger.info("Configuration Summary:")
+        logger.info(f"  Input files:")
+        logger.info(f"    - Aggregation dir: {args.aggregation_dir}")
+        logger.info(f"    - SSM file: {args.ssm_file}")
+        logger.info(f"    - Longitudinal data: {args.longitudinal_data}")
+        logger.info(f"  Analysis parameters:")
+        logger.info(f"    - N markers: {args.n_markers}")
+        logger.info(f"    - Read depth: {args.read_depth}")
+        logger.info(f"    - Lambda1 (fraction weight): {args.lambda1}")
+        logger.info(f"    - Lambda2 (structure weight): {args.lambda2}")
+        logger.info(f"    - Method: {args.method}")
+        if args.analysis_mode in ['fixed', 'both']:
+            logger.info(f"  Fixed markers: {args.fixed_markers}")
+        
         # Validate input files
         if not validate_input_files(args, logger):
             logger.error("Input validation failed. Exiting.")
@@ -1115,7 +1204,6 @@ def main():
             'parameters': {
                 'n_markers': args.n_markers,
                 'read_depth': args.read_depth,
-                'algorithm': args.algorithm,
                 'method': args.method,
                 'lambda1': args.lambda1,
                 'lambda2': args.lambda2

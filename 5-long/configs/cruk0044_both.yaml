@@ -1,0 +1,58 @@
+# CRUK0044 Comparative Analysis Configuration
+# Longitudinal cancer evolution analysis using both dynamic and fixed marker approaches
+
+# Patient and analysis identification
+patient_id: "CRUK0044"
+analysis_mode: "both"  # Run both dynamic and fixed approaches for comparison
+
+# Input file paths - UPDATE THESE PATHS FOR YOUR ENVIRONMENT
+input_files:
+  aggregation_dir: "/path/to/data/CRUK0044/initial/aggregation_results"
+  ssm_file: "/path/to/data/CRUK0044/ssm.txt"
+  longitudinal_data: "/path/to/data/cruk0044_liquid.csv"
+  code_dir: "/path/to/tracerx-mp"  # Base directory of the TracerX-MP repository
+
+# Output configuration
+output:
+  base_dir: "/path/to/data/CRUK0044/longitudinal_comparative"
+  create_subdirs: true
+
+# Analysis parameters
+parameters:
+  n_markers: 2  # Number of markers for dynamic selection
+  read_depth: 90000  # Expected read depth for ddPCR analysis
+  method: "phylowgs"
+  lambda1: 0.0  # Weight for fraction-based objective (0.0 = ignore fractions)
+  lambda2: 1.0  # Weight for structure-based objective (1.0 = focus on tree structure)
+  focus_sample: 0
+
+# Fixed markers - clinically specified genes for fixed approach
+fixed_markers:
+  - "DLG2_11_83544685_T>A"
+  - "GPR65_14_88477948_G>T"
+  - "C12orf74_12_93100715_G>T"
+  - "CSMD1_8_2975974_G>T"
+  - "OR51D1_11_4661941_G>T"
+
+# Optional filtering (empty = analyze all timepoints)
+filtering:
+  timepoints: []
+
+# Output and visualization options
+visualization:
+  generate_plots: true
+  plot_format: "png"
+  save_intermediate: true  # Save intermediate results for comparison
+
+# Validation and debugging
+validation:
+  validate_inputs: true
+  debug_mode: false  # Set to true for detailed debugging
+
+# HPC/SLURM configuration
+hpc:
+  job_name: "cruk0044_comparative_longitudinal"
+  partition: "pool1"
+  cpus_per_task: 1
+  memory: "16G"
+  conda_env: "markers_env" 
