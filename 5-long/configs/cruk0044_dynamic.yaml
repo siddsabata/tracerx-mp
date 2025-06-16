@@ -20,7 +20,7 @@ output:
 
 # Analysis parameters
 parameters:
-  n_markers: 2  # Number of markers to select at each timepoint
+  n_markers: 5  # Number of markers to select at each timepoint
   read_depth: 90000  # Expected read depth for ddPCR analysis
   method: "phylowgs"
   lambda1: 0.0  # Weight for fraction-based objective (0.0 = ignore fractions)

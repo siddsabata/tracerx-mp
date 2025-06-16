@@ -347,7 +347,7 @@ def load_tree_distributions(aggregation_dir: Path, method: str, logger: logging.
     return tree_distribution_summary, tree_distribution_full
 
 
-def load_tissue_data_from_ssm(ssm_file: Path, logger: logging.Logger) -> Tuple[pd.DataFrame, Dict, List, List]:
+def load_tissue_data_from_ssm(ssm_file: Path, logger: logging.Logger) -> Tuple[pd.DataFrame, Dict, List, List, Dict]:
     """
     Load and process tissue mutation data from SSM file format.
     
@@ -359,7 +359,7 @@ def load_tissue_data_from_ssm(ssm_file: Path, logger: logging.Logger) -> Tuple[p
         logger: Logger instance for reporting
         
     Returns:
-        Tuple of (tissue_dataframe, gene2idx_mapping, gene_name_list, gene_list)
+        Tuple of (tissue_dataframe, gene2idx_mapping, gene_name_list, gene_list, gene_name2idx_mapping)
     """
     logger.info(f"Loading tissue data from SSM file: {ssm_file}")
     
@@ -405,13 +405,17 @@ def load_tissue_data_from_ssm(ssm_file: Path, logger: logging.Logger) -> Tuple[p
         
         gene_name_list.append(gene)
     
-    # Create mapping from actual gene names to indices (this was the bug!)
-    gene2idx = {gene_name: idx for idx, gene_name in enumerate(gene_name_list)}
+    # Create DUAL mappings to support both use cases:
+    # 1. gene2idx: Maps mutation IDs ('s0', 's1'...) to indices - for optimization functions
+    # 2. gene_name2idx: Maps actual gene names to indices - for fixed marker validation
+    gene2idx = {f's{idx}': idx for idx in range(len(gene_name_list))}
+    gene_name2idx = {gene_name: idx for idx, gene_name in enumerate(gene_name_list)}
     
     logger.info(f"Created gene list: {len(gene_list)} genes in 's0', 's1'... format")
     logger.info(f"Processed gene names: {len(gene_name_list)} names with duplicate handling")
+    logger.info(f"Created dual mappings: gene2idx for optimization, gene_name2idx for validation")
     
-    return tissue_df, gene2idx, gene_name_list, gene_list
+    return tissue_df, gene2idx, gene_name_list, gene_list, gene_name2idx
 
 
 def load_longitudinal_data_from_csv(csv_file: Path, logger: logging.Logger) -> Dict[str, pd.DataFrame]:
@@ -466,14 +470,14 @@ def load_longitudinal_data_from_csv(csv_file: Path, logger: logging.Logger) -> D
         raise
 
 
-def validate_fixed_markers(user_specified_markers: List[str], gene2idx: Dict, gene_name_list: List[str],
+def validate_fixed_markers(user_specified_markers: List[str], gene_name2idx: Dict, gene_name_list: List[str],
                           logger: logging.Logger) -> Tuple[List[str], List[str]]:
     """
     Validate and convert user-specified fixed markers to internal format.
     
     Args:
         user_specified_markers: List of gene names specified by user
-        gene2idx: Mapping from gene names to indices
+        gene_name2idx: Mapping from gene names to indices
         gene_name_list: List of all available gene names
         logger: Logger instance
         
@@ -487,9 +491,9 @@ def validate_fixed_markers(user_specified_markers: List[str], gene2idx: Dict, ge
     missing_markers = []
     
     for gene_name in user_specified_markers:
-        if gene_name in gene2idx:
+        if gene_name in gene_name2idx:
             # Gene found in the dataset
-            gene_idx = gene2idx[gene_name]
+            gene_idx = gene_name2idx[gene_name]
             marker_id = f"s{gene_idx}"  # Convert to marker ID format
             validated_gene_names.append(gene_name)
             validated_marker_ids.append(marker_id)
@@ -641,7 +645,7 @@ def run_fixed_marker_analysis(args: argparse.Namespace, logger: logging.Logger,
                               tree_distribution_summary: Dict, tree_distribution_full: Dict,
                               gene_list: List[str], gene2idx: Dict, gene_name_list: List[str],
                               timepoint_data: Dict[str, pd.DataFrame], 
-                              output_dir: Path) -> Dict:
+                              output_dir: Path, gene_name2idx: Dict) -> Dict:
     """
     Run complete fixed marker analysis across all timepoints.
     
@@ -651,10 +655,11 @@ def run_fixed_marker_analysis(args: argparse.Namespace, logger: logging.Logger,
         tree_distribution_summary: Initial tree distribution summary
         tree_distribution_full: Initial full tree distribution
         gene_list: List of gene identifiers
-        gene2idx: Gene name to index mapping
+        gene2idx: Gene ID to index mapping (for tree optimization)
         gene_name_list: List of gene names
         timepoint_data: ddPCR data for all timepoints
         output_dir: Output directory
+        gene_name2idx: Gene name to index mapping (for fixed marker validation)
         
     Returns:
         Dictionary containing all fixed marker analysis results
@@ -670,7 +675,7 @@ def run_fixed_marker_analysis(args: argparse.Namespace, logger: logging.Logger,
     
     # Step 1: Validate user-specified fixed markers
     fixed_markers, fixed_gene_names = validate_fixed_markers(
-        args.fixed_markers, gene2idx, gene_name_list, logger)
+        args.fixed_markers, gene_name2idx, gene_name_list, logger)
     
     # Sort timepoints chronologically
     sorted_timepoints = sorted(timepoint_data.keys())
@@ -1184,7 +1189,7 @@ def main():
         
         # Load tissue data from SSM file
         ssm_file = Path(args.ssm_file)
-        tissue_df, gene2idx, gene_name_list, gene_list = load_tissue_data_from_ssm(ssm_file, logger)
+        tissue_df, gene2idx, gene_name_list, gene_list, gene_name2idx = load_tissue_data_from_ssm(ssm_file, logger)
         
         # Load longitudinal data from CSV file
         longitudinal_file = Path(args.longitudinal_data)
@@ -1215,7 +1220,7 @@ def main():
             logger.info("=== Running Fixed Marker Analysis ===")
             fixed_results = run_fixed_marker_analysis(
                 args, logger, tree_distribution_summary, tree_distribution_full,
-                gene_list, gene2idx, gene_name_list, timepoint_data, output_dir)
+                gene_list, gene2idx, gene_name_list, timepoint_data, output_dir, gene_name2idx)
         
         # Generate comparative analysis if both approaches were run
         if args.analysis_mode == 'both' and dynamic_results and fixed_results:
