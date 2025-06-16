@@ -25,7 +25,7 @@ if [ "$#" -lt 6 ] || [ "$#" -gt 8 ]; then
     echo "Error: Incorrect number of arguments."
     echo "Usage: sbatch $0 <patient_id> <aggregation_directory> <ssm_file_path> <longitudinal_data_csv> <output_directory> <code_directory> [read_depth] [additional_flags]"
     echo "Example: sbatch $0 CRUK0044 /path/to/data/CRUK0044/initial/aggregation_results /path/to/data/CRUK0044/ssm.txt /path/to/data/cruk0044_liquid.csv /path/to/data/CRUK0044/longitudinal_fixed /path/to/tracerx-mp 90000 '--debug'"
-    echo "Fixed markers used: DLG2 GPR65 C12orf74 CSMD1 OR51D1"
+    echo "Fixed markers used: DLG2_11_83544685_T>A GPR65_14_88477948_G>T C12orf74_12_93100715_G>T CSMD1_8_2975974_G>T OR51D1_11_4661941_G>T"
     echo "Additional flags: '--debug', '--no-plots', '--save-intermediate', etc."
     exit 1
 fi
@@ -40,7 +40,14 @@ READ_DEPTH=${7:-90000} # Default to 90000 if not provided
 ADDITIONAL_FLAGS=${8:-""} # Optional additional flags
 
 # Fixed markers - these are the clinically specified genes
-FIXED_MARKERS="DLG2_11_83544685_T>A GPR65_14_88477948_G>T C12orf74_12_93100715_G>T CSMD1_8_2975974_G>T OR51D1_11_4661941_G>T"
+# Using array to properly handle markers with > character
+declare -a FIXED_MARKERS_ARRAY=(
+    "DLG2_11_83544685_T>A"
+    "GPR65_14_88477948_G>T" 
+    "C12orf74_12_93100715_G>T"
+    "CSMD1_8_2975974_G>T"
+    "OR51D1_11_4661941_G>T"
+)
 
 # Validate required input files and directories
 if [ ! -d "$AGGREGATION_DIR" ]; then
@@ -87,7 +94,7 @@ echo "Longitudinal CSV: ${LONGITUDINAL_CSV}"
 echo "Output Directory: ${OUTPUT_DIR}"
 echo "Code Directory: ${CODE_DIR}"
 echo "Analysis Mode: FIXED MARKERS"
-echo "Fixed Markers: ${FIXED_MARKERS}"
+echo "Fixed Markers: ${FIXED_MARKERS_ARRAY[*]}"
 echo "Read Depth: ${READ_DEPTH}"
 echo "Additional Flags: ${ADDITIONAL_FLAGS}"
 echo "Log Directory: ${LOG_DIR}"
@@ -137,26 +144,20 @@ fi
 echo "Running longitudinal fixed marker analysis Python script: $LONGITUDINAL_SCRIPT_PATH"
 
 # Build the command with required arguments for FIXED MARKER MODE
-CMD="python \"$LONGITUDINAL_SCRIPT_PATH\" \"${PATIENT_ID}\" \
-    --aggregation-dir \"${AGGREGATION_DIR}\" \
-    --ssm-file \"${SSM_FILE}\" \
-    --longitudinal-data \"${LONGITUDINAL_CSV}\" \
-    --output-dir \"${OUTPUT_DIR}\" \
+# Use array expansion to properly pass markers with > character
+python "$LONGITUDINAL_SCRIPT_PATH" "$PATIENT_ID" \
+    --aggregation-dir "$AGGREGATION_DIR" \
+    --ssm-file "$SSM_FILE" \
+    --longitudinal-data "$LONGITUDINAL_CSV" \
+    --output-dir "$OUTPUT_DIR" \
     --analysis-mode fixed \
-    --fixed-markers ${FIXED_MARKERS} \
-    --read-depth \"${READ_DEPTH}\""
-
-# Add any additional flags
-if [ -n "$ADDITIONAL_FLAGS" ]; then
-    CMD="$CMD $ADDITIONAL_FLAGS"
-fi
-
-echo "Executing command: $CMD"
-echo "Fixed markers being tracked: ${FIXED_MARKERS}"
-echo "Analysis mode: FIXED (user-specified markers)"
-eval $CMD
+    --fixed-markers "${FIXED_MARKERS_ARRAY[@]}" \
+    --read-depth "$READ_DEPTH" \
+    $ADDITIONAL_FLAGS
 
 SCRIPT_EXIT_CODE=$?
+echo "Fixed markers being tracked: ${FIXED_MARKERS_ARRAY[*]}"
+echo "Analysis mode: FIXED (user-specified markers)"
 if [ $SCRIPT_EXIT_CODE -eq 0 ]; then
     echo "Longitudinal fixed marker analysis completed successfully for patient ${PATIENT_ID}."
 else
@@ -168,7 +169,7 @@ fi
 echo "=== LONGITUDINAL FIXED MARKER ANALYSIS COMPLETED ==="
 echo "Patient: ${PATIENT_ID}"
 echo "Analysis Mode: FIXED MARKERS"
-echo "Fixed Markers Tracked: ${FIXED_MARKERS}"
+echo "Fixed Markers Tracked: ${FIXED_MARKERS_ARRAY[*]}"
 echo "Results directory: ${OUTPUT_DIR}"
 echo "Logs directory: ${LOG_DIR}"
 echo ""

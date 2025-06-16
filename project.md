@@ -32,11 +32,21 @@ The enhancement phase focused on **improving existing pipeline capabilities** an
    - Developed 2-marker optimization strategy for clinical feasibility
    - Created computational-clinical feedback loop for temporal cancer monitoring
    - Integrated ddPCR data processing for liquid biopsy analysis
+   - **Implemented both dynamic and fixed marker approaches**
+   - **Added user-specified fixed marker functionality for clinical workflows**
+   - **Created production SLURM scripts for both analysis modes**
 
 3. **Enhanced Multi-Sample Support**: ✅ **COMPLETED**
    - Flexible VAF filtering strategies across all pipeline stages
    - Robust data consistency validation
    - Backward compatibility maintenance
+
+4. **Fixed Marker Clinical Integration**: ✅ **COMPLETED**
+   - User-specified marker input for clinician-driven analysis
+   - Consistent marker tracking across all timepoints
+   - Validation and error handling for missing markers
+   - Production-ready SLURM script with clinical gene specifications
+   - Comparative analysis between dynamic and fixed approaches
 
 ### Future Development (Clinical Integration Phase)
 The next major phase will focus on **clinical deployment and validation**:
@@ -80,7 +90,9 @@ tracerx-mp/
 │   ├── optimize.py          # General optimization utilities
 │   └── environment.yml      # Conda environment for marker selection
 ├── 5-long/                  # Longitudinal analysis stage
-│   ├── iterative_pipeline_real.py    # Main longitudinal analysis implementation
+│   ├── longitudinal_update.py        # Main longitudinal analysis implementation (UPDATED)
+│   ├── longitudinal_analysis.sh      # SLURM script for dynamic marker analysis
+│   ├── longitudinal_analysis_fixed.sh # SLURM script for fixed marker analysis (NEW)
 │   ├── adjust_tree_distribution.py   # Bayesian tree updating algorithms
 │   ├── optimize_fraction.py          # Marker optimization for longitudinal tracking
 │   ├── optimize.py                   # Tree structure optimization utilities
@@ -234,41 +246,87 @@ The marker selection stage now supports variable numbers of samples (2 to n) wit
 
 This resolves data consistency issues between SSM input and tree distribution data.
 
-### 6. Longitudinal Analysis Stage (`5-long/`)
-- **Purpose**: Implements iterative Bayesian tree updating using blood sample data over time
+### 6. Longitudinal Analysis Stage (`5-long/`) ✅ **ENHANCED**
+- **Purpose**: Implements iterative Bayesian tree updating using blood sample data over time with **both dynamic and fixed marker approaches**
 - **Components**:
-  - `iterative_pipeline_real.py`: Main longitudinal analysis implementation
+  - `longitudinal_update.py`: **Enhanced** main longitudinal analysis implementation
+  - `longitudinal_analysis.sh`: SLURM script for dynamic marker analysis
+  - `longitudinal_analysis_fixed.sh`: **NEW** SLURM script for fixed marker analysis
   - `adjust_tree_distribution.py`: Bayesian tree updating algorithms
   - `optimize_fraction.py`: Marker optimization for longitudinal tracking
   - `optimize.py`: Tree structure optimization utilities
   - `analyze.py`: Analysis and tree processing utilities
 - **Inputs**:
   - Tree distribution files from aggregation stage (`phylowgs_bootstrap_summary.pkl`, `phylowgs_bootstrap_aggregation.pkl`)
-  - Patient tissue data (`{patient_name}_subset.xlsx`)
-  - Longitudinal blood sample data (`{patient_name}__DateSample.xlsx`)
+  - Patient tissue data (SSM format)
+  - Longitudinal blood sample data (CSV format with ddPCR measurements)
+  - **NEW**: User-specified fixed markers for clinical workflows
   - Updated tree distributions from previous timepoints (iterative)
 - **Outputs**:
-  - Updated tree distribution summaries (`{method}_bootstrap_summary_updated_{algo}_{n_markers}_{timepoint}_bayesian.pkl`)
-  - Tree weight change visualizations (`Patient_{patient_num}_weights_change.eps`)
+  - **Dynamic approach**: Updated tree distributions with optimally selected markers per timepoint
+  - **Fixed approach**: Updated tree distributions using consistent user-specified markers
+  - **Comparative analysis**: Performance comparison between approaches
+  - Tree weight change visualizations and analysis summaries
   - Selected marker recommendations for ddPCR assays
 - **Dependencies**: 
   - Python 3.x with advanced scientific libraries
   - Gurobi optimization solver (requires license)
   - External ddPCR data from clinical laboratory
 
-#### **Longitudinal Analysis Workflow**
-The longitudinal stage implements a **two-phase computational-clinical feedback loop**:
+#### **Enhanced Longitudinal Analysis Workflow**
+The longitudinal stage now implements **dual-mode computational-clinical feedback loops**:
 
-**Phase 1: Computational Marker Selection**
-1. **Initial Analysis**: Load tree distributions from aggregation stage (100 bootstrap trees)
-2. **Marker Optimization**: Select exactly 2 optimal genetic markers using Gurobi optimization
-3. **Clinical Recommendation**: Provide specific markers for ddPCR assay development
+**Dynamic Marker Approach (Research-Focused)**:
+1. **Adaptive Selection**: Algorithmically selects optimal markers at each timepoint
+2. **Maximum Information**: Optimizes for maximum discriminatory power
+3. **Research Applications**: Method development and tumor dynamics understanding
 
-**Phase 2: Iterative Clinical Monitoring**
-1. **Blood Collection**: Patient blood draws at regular intervals (monthly)
-2. **ddPCR Analysis**: Laboratory measures variant allele frequencies (VAF) for selected markers
-3. **Bayesian Update**: Algorithm updates tree probabilities based on observed VAFs
-4. **Iterative Refinement**: Repeat for subsequent timepoints using updated distributions
+**Fixed Marker Approach (Clinical-Focused)**:
+1. **Clinician-Specified**: Uses markers specified by clinical teams
+2. **Consistent Tracking**: Same markers across all timepoints
+3. **Clinical Applications**: Standardized monitoring and treatment response assessment
+
+**Command Line Interface**:
+```bash
+# Dynamic marker analysis
+python longitudinal_update.py PATIENT_ID \
+    --analysis-mode dynamic \
+    --n-markers 3 \
+    [other parameters...]
+
+# Fixed marker analysis with user-specified markers
+python longitudinal_update.py PATIENT_ID \
+    --analysis-mode fixed \
+    --fixed-markers TP53 KRAS PIK3CA EGFR BRAF \
+    [other parameters...]
+
+# Comparative analysis (both approaches)
+python longitudinal_update.py PATIENT_ID \
+    --analysis-mode both \
+    --n-markers 3 \
+    --fixed-markers TP53 KRAS PIK3CA \
+    [other parameters...]
+```
+
+#### **Clinical Integration Features**
+
+**Fixed Marker Validation**:
+- Validates user-specified markers against available dataset
+- Provides clear feedback on found/missing markers
+- Proceeds with valid markers, warns about unavailable ones
+- Supports full gene identifiers with genomic coordinates
+
+**Production SLURM Integration**:
+- `longitudinal_analysis.sh`: Dynamic marker analysis on HPC
+- `longitudinal_analysis_fixed.sh`: Fixed marker analysis with clinical genes
+- Proper resource allocation and error handling
+- Integration with existing HPC job submission workflows
+
+**Clinical Workflow Benefits**:
+- **Standardized Assays**: Consistent marker panels for clinical implementation
+- **Regulatory Compliance**: Fixed assays easier to validate and approve
+- **Cost Efficiency**: Single assay development vs. multiple dynamic assays
+- **Clinical Adoption**: Familiar workflow for clinical laboratories
 
 #### **Key Features of Longitudinal Analysis**
 
@@ -545,13 +603,16 @@ This ensures the pipeline works reliably regardless of Slurm's job directory beh
 
 **Completed Features**:
 - ✅ Iterative Bayesian tree updating using blood sample data
-- ✅ 2-marker optimization strategy for clinical feasibility  
+- ✅ **Dual-mode operation**: Dynamic and fixed marker approaches
+- ✅ **Clinical workflow integration**: User-specified fixed markers
 - ✅ Computational-clinical feedback loop implementation
 - ✅ ddPCR data integration and processing
 - ✅ Multi-timepoint analysis workflow
 - ✅ Tree frequency visualization and reporting
+- ✅ **Production SLURM scripts**: Both dynamic and fixed marker analysis
+- ✅ **Comparative analysis**: Performance comparison between approaches
 
-**Achievement**: Full longitudinal analysis capability allowing temporal cancer evolution tracking through blood-based monitoring with optimized genetic marker panels.
+**Achievement**: Full longitudinal analysis capability allowing temporal cancer evolution tracking through blood-based monitoring with both research-optimized (dynamic) and clinically-practical (fixed) marker approaches.
 
 ### 2. Clinical Integration and Validation (High Priority)
 **Goal**: Prepare longitudinal analysis for clinical deployment and validation
@@ -603,9 +664,9 @@ This ensures the pipeline works reliably regardless of Slurm's job directory beh
 - **Phase 4 (Clinical Integration)**: 🔄 In Progress - 5-8 days estimated
 - **Phase 5 (Research Extensions)**: 📅 Planned - 10-15 days estimated
 
-**Current Status**: 3/5 phases completed. The pipeline now includes full longitudinal analysis capability with 2-marker optimization, Bayesian tree updating, and computational-clinical feedback loops.
+**Current Status**: 3/5 phases completed. The pipeline now includes full longitudinal analysis capability with **both dynamic and fixed marker approaches**, 2-marker optimization, Bayesian tree updating, and computational-clinical feedback loops.
 
-**Total Development Time**: 26 days completed, 15-23 days remaining for clinical deployment readiness.
+**Total Development Time**: 28 days completed, 13-21 days remaining for clinical deployment readiness.
 
 ## Project Achievements
 
@@ -617,9 +678,12 @@ This ensures the pipeline works reliably regardless of Slurm's job directory beh
 
 ### **Advanced Longitudinal Analysis** ✅ COMPLETED  
 - **Temporal evolution tracking**: Blood-based cancer monitoring over time
+- **Dual-mode operation**: Both dynamic (research) and fixed (clinical) marker approaches
 - **2-marker optimization**: Clinically feasible ddPCR panel design
 - **Bayesian tree updating**: Statistical integration of longitudinal evidence
 - **Clinical integration**: Computational-clinical feedback loop implementation
+- **User-specified markers**: Clinician-driven marker selection for fixed approach
+- **Production deployment**: SLURM scripts for both analysis modes
 
 ### **Research and Clinical Impact**
 - **Cost reduction**: $100-200 per monitoring timepoint vs. $1000+ for tissue analysis
