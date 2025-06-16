@@ -10,7 +10,8 @@ input_files:
   aggregation_dir: "/path/to/aggregation_results"  # Directory containing tree distributions
   ssm_file: "/path/to/ssm.txt"  # SSM file with tissue mutation data
   longitudinal_data: "/path/to/longitudinal_data.csv"  # ddPCR longitudinal data
-  code_dir: "/path/to/tracerx-mp"  # Base directory of the TracerX-MP repository
+  # Base directory of the TracerX-MP repository
+  code_dir: "/path/to/tracerx-mp"
 
 # Output configuration
 output:

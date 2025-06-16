@@ -7,14 +7,15 @@ analysis_mode: "both"  # Run both dynamic and fixed approaches for comparison
 
 # Input file paths - UPDATE THESE PATHS FOR YOUR ENVIRONMENT
 input_files:
-  aggregation_dir: "/path/to/data/CRUK0044/initial/aggregation_results"
-  ssm_file: "/path/to/data/CRUK0044/ssm.txt"
-  longitudinal_data: "/path/to/data/cruk0044_liquid.csv"
-  code_dir: "/path/to/tracerx-mp"  # Base directory of the TracerX-MP repository
+  aggregation_dir: "~/patient_data/cruk0044/initial/aggregation_results/"
+  ssm_file: "~/tracerx-mp/data/ssm.txt"
+  longitudinal_data: "~/tracerx-mp/data/cruk0044_liquid.csv"
+  # Base directory of the TracerX-MP repository
+  code_dir: "~/tracerx-mp/"
 
 # Output configuration
 output:
-  base_dir: "/path/to/data/CRUK0044/longitudinal_comparative"
+  base_dir: "~/patient_data/cruk0044/longitudinal_comparative/"
   create_subdirs: true
 
 # Analysis parameters
