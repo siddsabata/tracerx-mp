@@ -7,14 +7,14 @@ analysis_mode: "fixed"  # Using fixed markers specified by clinical team
 
 # Input file paths - UPDATE THESE PATHS FOR YOUR ENVIRONMENT
 input_files:
-  aggregation_dir: "/path/to/data/CRUK0044/initial/aggregation_results"
-  ssm_file: "/path/to/data/CRUK0044/ssm.txt"
-  longitudinal_data: "/path/to/data/cruk0044_liquid.csv"
-  code_dir: "/path/to/tracerx-mp"  # Base directory of the TracerX-MP repository
+  aggregation_dir: "~/patient_data/cruk0044/initial/aggregation_results/"
+  ssm_file: "~/tracerx-mp/data/ssm.txt"
+  longitudinal_data: "~/tracerx-mp/data/cruk0044_liquid.csv"
+  code_dir: "~/tracerx-mp/"  # Base directory of the TracerX-MP repository
 
 # Output configuration
 output:
-  base_dir: "/path/to/data/CRUK0044/longitudinal_fixed"
+  base_dir: "~/patient_data/cruk0044/longitudinal_fixed/"
   create_subdirs: true
 
 # Analysis parameters
