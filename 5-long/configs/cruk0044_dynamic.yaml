@@ -7,15 +7,15 @@ analysis_mode: "dynamic"  # Dynamic marker selection
 
 # Input file paths - UPDATE THESE PATHS FOR YOUR ENVIRONMENT
 input_files:
-  aggregation_dir: "~/patient_data/cruk0044/initial/aggregation_results/"
-  ssm_file: "~/tracerx-mp/data/ssm.txt"
-  longitudinal_data: "~/tracerx-mp/data/cruk0044_liquid.csv"
+  aggregation_dir: "/home/ssabata/patient_data/cruk0044/initial/aggregation_results/"
+  ssm_file: "/home/ssabata/tracerx-mp/data/ssm.txt"
+  longitudinal_data: "/home/ssabata/tracerx-mp/data/cruk0044_liquid.csv"
   # Base directory of the TracerX-MP repository
-  code_dir: "~/tracerx-mp/"
+  code_dir: "/home/ssabata/tracerx-mp/"
 
 # Output configuration
 output:
-  base_dir: "~/patient_data/cruk0044/longitudinal_dynamic/"
+  base_dir: "/home/ssabata/patient_data/cruk0044/longitudinal/"
   create_subdirs: true
 
 # Analysis parameters
@@ -49,6 +49,6 @@ validation:
 hpc:
   job_name: "cruk0044_dynamic_longitudinal"
   partition: "pool1"
-  cpus_per_task: 1
+  cpus_per_task: 4
   memory: "16G"
   conda_env: "markers_env" 
