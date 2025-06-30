@@ -8,7 +8,7 @@ analysis_type: "test"
 # Input files and directories - UPDATE THESE PATHS FOR YOUR ENVIRONMENT
 input:
   ssm_file: "/home/ssabata/tracerx-mp/data/ssm_subset.txt"  # 5-mutation subset for testing
-  code_dir: "/home/ssabata/tracerx-mp/tracerx-mp/"
+  code_dir: "/home/ssabata/tracerx-mp/"
 
 # Output configuration  
 output:
