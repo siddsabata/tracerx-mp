@@ -1,201 +1,179 @@
-# TracerX Longitudinal Analysis Cleanup TODO
+# TracerX Marker Selection Pipeline - Steps 1-4 Enhancement
 
-## Overview
-Clean up the longitudinal analysis pipeline to follow first principles with simple, focused functionality. Remove placeholder features and unnecessary complexity.
+## Project Objective
+Focus on cleaning up, enhancing, and streamlining steps 1-4 of the TracerX marker selection pipeline while preserving all existing functionality. The goal is to create a unified, YAML-configured, and orchestrated workflow for the initial processing phases.
 
-## 1. Code Structure Refactoring (Priority: HIGH)
+## Core Principles
+- **Preserve functionality**: Steps 1-4 currently work fine - maintain exact same behavior
+- **Simplest solution**: Follow first principles, avoid over-engineering
+- **Clean code**: Files should be no more than 300 lines (except master sbatch script and bash scripts)
+- **Consistent structure**: Unified approach across all 4 steps
 
-### 1.1 Split longitudinal_update.py (1281 lines → max 300 lines per file)
+## Task Breakdown
 
-**Target structure:**
-```
-5-long/
-├── longitudinal_main.py           # Main entry point and pipeline orchestration (~200 lines)
-├── config_handler.py              # YAML configuration loading and validation (~150 lines)
-├── data_loader.py                 # SSM and longitudinal data loading (~200 lines)
-├── marker_validator.py            # Fixed marker validation and processing (~100 lines)
-├── tree_updater.py               # Bayesian tree updating logic (~250 lines)
-├── dynamic_analysis.py           # Dynamic marker selection workflow (~250 lines)
-├── fixed_analysis.py             # Fixed marker analysis workflow (~150 lines)
-├── output_manager.py             # Results saving and directory management (~150 lines)
-└── utils.py                      # Shared utilities and helpers (~100 lines)
-```
+### 1. Code Cleanup and Organization ⚠️ CRITICAL PRIORITY
+**Objective**: Clean up all code in steps 1-4 while preserving exact functionality
 
-**Tasks:**
-- [ ] Extract configuration handling into `config_handler.py`
-- [ ] Move data loading functions to `data_loader.py`
-- [ ] Create focused `marker_validator.py` for fixed marker validation only
-- [ ] Move tree updating logic to `tree_updater.py`
-- [ ] Separate dynamic and fixed analysis into dedicated modules
-- [ ] Create `output_manager.py` for standardized result handling
-- [ ] Consolidate shared utilities in `utils.py`
-- [ ] Update imports and ensure proper module dependencies
+#### 1.1 File Structure Reorganization
+- [ ] Review current file naming conventions across all 4 steps
+- [ ] Rename files appropriately for consistency (e.g., `bootstrap.py` → `step1_bootstrap.py`)
+- [ ] Consolidate redundant utility functions across steps
+- [ ] Remove unused/obsolete files while maintaining functionality
+- [ ] Ensure each Python file is under 300 lines
 
-## 2. Remove Placeholder Features (Priority: HIGH)
+#### 1.2 Code Quality Improvements
+- [ ] Add comprehensive comments and docstrings to all Python files
+- [ ] Standardize import statements and coding style
+- [ ] Remove hardcoded paths and make configuration-driven
+- [ ] Improve error handling and logging consistency
+- [ ] Add input validation for all functions
 
-### 2.1 Remove Non-Functional Features
-- [ ] **Remove confidence metrics calculation** - Currently placeholder/non-functional
-- [ ] **Remove comparative analysis feature** - Only run one mode at a time
-- [ ] **Remove "both" analysis mode** - Simplify to dynamic XOR fixed
-- [ ] **Remove measurement confidence tracking** - Unnecessary complexity
-- [ ] **Remove performance metrics calculations** - Focus on core functionality
-- [ ] **Remove prediction VAF calculations** - Placeholder implementation
+#### 1.3 Dependency Management
+- [ ] Review and clean up environment.yml files for each step
+- [ ] Remove unused dependencies
+- [ ] Ensure version consistency across steps
+- [ ] Document all external dependencies clearly
 
-### 2.2 Clean Up Arguments and Configuration
-- [ ] Remove `--analysis-mode both` option from argument parser
-- [ ] Simplify YAML configuration schema (remove comparative sections)
-- [ ] Remove unused configuration parameters
-- [ ] Remove validation logic for "both" mode
+### 2. YAML Configuration System ⚠️ HIGH PRIORITY
+**Objective**: Implement unified YAML configuration for steps 1-4 (similar to step 5)
 
-### 2.3 Audit and Remove Dead Code
-- [ ] Review all functions in longitudinal_update.py for actual usage
-- [ ] Remove unused imports
-- [ ] Remove commented-out code blocks
-- [ ] Remove debugging print statements
+#### 2.1 YAML Schema Design
+- [ ] Create comprehensive YAML schema for all 4 steps
+- [ ] Design configuration structure covering:
+  - Patient information
+  - Input/output directories
+  - Bootstrap parameters
+  - PhyloWGS settings
+  - Aggregation options
+  - Marker selection criteria
+- [ ] Create template YAML files for different use cases
 
-## 3. Simplify Fixed Marker Selection (Priority: HIGH)
+#### 2.2 Configuration Integration
+- [ ] Modify step 1 (bootstrap) to accept YAML configuration
+- [ ] Modify step 2 (phylowgs) to accept YAML configuration
+- [ ] Modify step 3 (aggregation) to accept YAML configuration
+- [ ] Modify step 4 (markers) to accept YAML configuration
+- [ ] Implement configuration validation for each step
+- [ ] Maintain backward compatibility with current CLI arguments
 
-### 3.1 Core Fixed Marker Functionality
-**Goal:** Use constant user-specified markers, update trees based on their VAFs over time.
+#### 2.3 Configuration Templates
+- [ ] Create `configs/` directory structure
+- [ ] Design template: `configs/standard_analysis.yaml`
+- [ ] Design template: `configs/test_analysis.yaml` (for 5-mutation subset)
+- [ ] Design template: `configs/high_depth_analysis.yaml`
+- [ ] Add configuration documentation and examples
 
-**Simple workflow:**
-1. User provides list of gene names
-2. Validate genes exist in dataset
-3. For each timepoint: extract VAFs for those genes
-4. Update tree distributions using Bayesian inference
-5. Save updated trees and continue to next timepoint
+### 3. Master SLURM Orchestration Script ⚠️ HIGH PRIORITY
+**Objective**: Create single sbatch command to run entire steps 1-4 pipeline
 
-### 3.2 Implementation Tasks
-- [ ] **Simplify marker validation** - Just check if genes exist, no fancy metrics
-- [ ] **Remove optimization logic from fixed mode** - No marker selection needed
-- [ ] **Streamline Bayesian updating** - Focus only on tree weight updates
-- [ ] **Remove unnecessary result tracking** - Just save updated trees
-- [ ] **Eliminate marker performance analysis** - Not needed for fixed mode
+#### 3.1 Master Script Development
+- [ ] Create `master_pipeline.sh` - single entry point for steps 1-4
+- [ ] Implement proper SLURM job dependencies (step N+1 waits for step N)
+- [ ] Design job array for step 2 (phylowgs) to handle multiple bootstraps
+- [ ] Add proper resource allocation for each step
+- [ ] Implement comprehensive error handling and rollback
 
-### 3.3 Fixed Mode Input/Output
-**Input:**
-```yaml
-analysis_mode: "fixed"
-fixed_markers:
-  - "TP53_17_7577120_G>A"
-  - "KRAS_12_25398284_C>A"
-```
+#### 3.2 Job Dependency Management
+- [ ] Step 1 (bootstrap): Single job, creates bootstrap samples
+- [ ] Step 2 (phylowgs): Job array, processes all bootstrap samples in parallel
+- [ ] Step 3 (aggregation): Single job, depends on all step 2 jobs completing
+- [ ] Step 4 (markers): Single job, depends on step 3 completion
+- [ ] Add proper exit code handling and dependency checking
 
-**Output:**
-```
-output_dir/
-├── updated_trees/
-│   ├── phylowgs_bootstrap_summary_updated_timepoint_0.pkl
-│   ├── phylowgs_bootstrap_summary_updated_timepoint_1.pkl
-│   └── ...
-├── marker_data/
-│   ├── fixed_markers_timepoint_0.json
-│   ├── fixed_markers_timepoint_1.json
-│   └── ...
-└── logs/
-    └── fixed_analysis.log
-```
+#### 3.3 Resource Optimization
+- [ ] Optimize memory and CPU allocation for each step
+- [ ] Implement intelligent walltime estimation based on data size
+- [ ] Add queue selection logic based on job requirements
+- [ ] Create monitoring and progress reporting
 
-## 4. Standardize Directory Structure (Priority: MEDIUM)
+### 4. Documentation Creation ⚠️ MEDIUM PRIORITY
+**Objective**: Create comprehensive `initial.md` documentation for steps 1-4
 
-### 4.1 Common Output Structure
-Both dynamic and fixed modes should follow this pattern:
-```
-output_dir/
-├── analysis_config.yaml          # Copy of input configuration
-├── analysis_summary.json         # High-level results summary
-├── updated_trees/                # Pickle files for each timepoint
-├── marker_data/                  # Marker selection/validation results
-├── plots/                        # Optional visualizations
-└── logs/                         # Execution logs
-```
+#### 4.1 Technical Documentation
+- [ ] Create `initial.md` following similar structure to `project.md`
+- [ ] Document each step's purpose, inputs, outputs, and dependencies
+- [ ] Include YAML configuration examples and explanations
+- [ ] Add troubleshooting guide for common issues
 
-### 4.2 Standardization Tasks
-- [ ] Define common directory structure for both modes
-- [ ] Standardize file naming conventions
-- [ ] Create consistent JSON schemas for outputs
-- [ ] Ensure both modes save trees in same format
-- [ ] Standardize logging across both modes
+#### 4.2 User Guide
+- [ ] Create step-by-step usage instructions
+- [ ] Document YAML configuration options
+- [ ] Add examples for different analysis scenarios
+- [ ] Include performance optimization tips
 
-## 5. Code Quality Improvements (Priority: MEDIUM)
+#### 4.3 Developer Guide
+- [ ] Document code structure and organization
+- [ ] Add contribution guidelines
+- [ ] Include testing procedures
+- [ ] Document extension points for future development
 
-### 5.1 Follow First Principles
-- [ ] **Single Responsibility Principle** - Each function does one thing
-- [ ] **Keep functions small** - Max 50 lines per function
-- [ ] **Clear naming** - Function names describe exactly what they do
-- [ ] **Minimal dependencies** - Only import what's actually used
-- [ ] **No premature optimization** - Focus on correctness first
+## Implementation Strategy
 
-### 5.2 Documentation and Comments
-- [ ] Add docstrings to all functions (following user's comment preferences)
-- [ ] Explain the "why" not just the "what" in comments
-- [ ] Document expected input/output formats
-- [ ] Add usage examples in module docstrings
+### Phase 1: Foundation (Days 1-2)
+1. **Code audit**: Review all files in steps 1-4, identify cleanup opportunities
+2. **Preserve functionality**: Create comprehensive test cases to ensure no regression
+3. **File organization**: Rename and reorganize files for consistency
 
-### 5.3 Error Handling
-- [ ] Remove complex error handling for placeholder features
-- [ ] Add simple, clear error messages for actual failure modes
-- [ ] Validate inputs early and fail fast
-- [ ] Log errors clearly with context
+### Phase 2: YAML Integration (Days 3-4)
+1. **Schema design**: Create comprehensive YAML configuration schema
+2. **Step-by-step integration**: Modify each step to accept YAML configuration
+3. **Template creation**: Develop YAML templates for common use cases
 
-## 6. Testing and Validation (Priority: LOW)
+### Phase 3: Master Orchestration (Days 5-6)
+1. **Master script development**: Create single-command pipeline execution
+2. **Dependency management**: Implement proper SLURM job dependencies
+3. **Resource optimization**: Optimize resource allocation and job arrays
 
-### 6.1 Manual Testing Approach
-- [ ] Create simple test configurations for both modes
-- [ ] Test with minimal datasets (5-10 mutations)
-- [ ] Verify output file generation
-- [ ] Check that trees are updated correctly
-
-### 6.2 Integration Testing
-- [ ] Test full pipeline from YAML config to final output
-- [ ] Verify SLURM script compatibility
-- [ ] Test error handling with invalid inputs
-
-## Implementation Order
-
-### Phase 1: Remove Complexity (1-2 days)
-1. Remove placeholder features and dead code
-2. Simplify argument parsing and configuration
-3. Remove "both" analysis mode
-
-### Phase 2: Split Files (2-3 days)
-1. Extract configuration handling
-2. Split data loading functions
-3. Separate dynamic and fixed analysis modules
-4. Create output management module
-
-### Phase 3: Simplify Fixed Mode (1 day)
-1. Streamline fixed marker validation
-2. Remove unnecessary optimization logic
-3. Focus on core Bayesian updating
-
-### Phase 4: Standardize Structure (1 day)
-1. Define common output format
-2. Implement consistent directory structure
-3. Standardize file naming
+### Phase 4: Documentation (Days 7-8)
+1. **Technical documentation**: Create comprehensive `initial.md`
+2. **User guides**: Document configuration and usage
+3. **Testing validation**: Ensure all functionality works as expected
 
 ## Success Criteria
 
-**Fixed Mode:**
-- Takes user-specified markers and timepoint data
-- Updates tree distributions using Bayesian inference
-- Saves updated trees for each timepoint
-- No optimization or marker selection logic
+### Functional Requirements
+- [ ] All existing functionality preserved (steps 1-4 work exactly as before)
+- [ ] Single YAML file configures entire steps 1-4 pipeline
+- [ ] Single `sbatch master_pipeline.sh config.yaml` command runs complete pipeline
+- [ ] Job dependencies work correctly (no step starts until previous completes)
+- [ ] Resource allocation optimized for each step
 
-**Dynamic Mode:**
-- Selects optimal markers at each timepoint
-- Updates trees based on selected markers
-- Saves both marker selections and updated trees
+### Quality Requirements
+- [ ] All Python files under 300 lines
+- [ ] Comprehensive comments and documentation
+- [ ] Clean, consistent code structure
+- [ ] Robust error handling and validation
+- [ ] Backward compatibility maintained
 
-**Both Modes:**
-- Clean, readable code in files < 300 lines
-- Consistent output directory structure
-- Clear error messages and logging
-- YAML configuration only (no command-line complexity)
+### Documentation Requirements
+- [ ] Complete `initial.md` documentation
+- [ ] YAML configuration guide
+- [ ] Usage examples and tutorials
+- [ ] Troubleshooting guide
+
+## Testing Plan
+
+### Functionality Testing
+- [ ] Test with existing CRUK0044 dataset (28 mutations)
+- [ ] Test with 5-mutation subset for rapid validation
+- [ ] Compare outputs with current pipeline results
+- [ ] Validate all intermediate files and final outputs
+
+### Configuration Testing
+- [ ] Test YAML configuration validation
+- [ ] Test error handling for invalid configurations
+- [ ] Test backward compatibility with CLI arguments
+- [ ] Test different configuration templates
+
+### Orchestration Testing
+- [ ] Test master script with small dataset
+- [ ] Test job dependency chain
+- [ ] Test failure recovery and rollback
+- [ ] Test resource allocation and monitoring
 
 ## Notes
-
-- **Principle:** Simple, focused functionality over feature completeness
-- **Goal:** Two clean, distinct analysis modes that actually work
-- **Approach:** Remove everything that isn't core functionality
-- **Testing:** Manual testing with real data, not unit test complexity 
+- **Preserve existing behavior**: This is the most critical requirement
+- **Incremental approach**: Make small, testable changes
+- **Comprehensive testing**: Validate every change against existing outputs
+- **Clean implementation**: Follow established patterns from step 5 YAML system
+- **User experience**: Single command should handle entire pipeline execution
