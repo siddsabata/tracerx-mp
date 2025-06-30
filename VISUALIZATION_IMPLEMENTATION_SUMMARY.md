@@ -14,6 +14,7 @@ A comprehensive visualization module containing all required plotting functions:
 - **Tree Evolution Plots**: Weight changes over time showing convergence behavior  
 - **VAF Plots (Fixed Mode)**: Tracks chosen markers across timepoints
 - **VAF Plots (Dynamic Mode)**: Tracks final converged markers from optimization
+- **Dynamic Marker Selection Plot**: Heatmap showing which markers are selected at each timepoint
 
 ### 2. Integration with Analysis Workflows
 
@@ -40,6 +41,7 @@ Standardized directory structure for all visualizations:
         ├── {patient_id}_dynamic_phylogenetic_tree.png
         ├── {patient_id}_dynamic_tree_evolution.png
         ├── {patient_id}_dynamic_marker_vaf.png
+        ├── {patient_id}_dynamic_marker_selection.png
         └── visualization_summary.json
 ```
 
@@ -78,6 +80,13 @@ Standardized directory structure for all visualizations:
 - **Dynamic Mode**: Tracks final converged markers from optimization
 - Multi-colored lines for different markers
 - Time progression with VAF values on y-axis
+
+### 4. Dynamic Marker Selection Plot (New!)
+- **Heatmap visualization**: Shows which markers are selected at each timepoint
+- **X-axis**: Time progression (each timepoint from optimization)
+- **Y-axis**: Available markers (bins for each potential marker)
+- **Fill**: Dark blue for selected markers, light for not selected
+- **Purpose**: Visualize how optimal marker selection changes over time
 
 ## Integration Benefits
 
@@ -133,6 +142,7 @@ This implementation successfully addresses all requirements from `todo.md`:
 ✅ **Tree Evolution Plots** - Weight tracking over time  
 ✅ **VAF Plots (Fixed)** - Chosen marker tracking  
 ✅ **VAF Plots (Dynamic)** - Converged marker tracking  
+✅ **Dynamic Marker Selection Plot** - Heatmap of marker selection over time  
 ✅ **Simple Implementation** - Following first principles  
 ✅ **PNG Format** - High-quality output files  
 ✅ **Reference Styling** - Based on existing pipeline approach  

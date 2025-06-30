@@ -36,6 +36,14 @@ All plots should be clean, simple, easy to read, and saved as PNG files.
 - Save as PNG format
 - **Implementation**: `create_dynamic_marker_vaf_plots()` function
 
+### 4. Dynamic Marker Selection Plot ✅ COMPLETED
+**For dynamic marker mode only**
+- Heatmap showing which markers are selected at each timepoint
+- X-axis: Time points, Y-axis: Available markers
+- Fill: Whether marker was selected from optimization at that timepoint
+- Save as PNG format
+- **Implementation**: `create_dynamic_marker_selection_plot()` function
+
 ## Implementation Summary ✅ COMPLETED
 
 ### Module Created: `5-long/longitudinal_visualizer.py`
@@ -47,6 +55,7 @@ A comprehensive visualization module with clean, modular functions:
 - **`create_vaf_plots()`**: Mode-specific VAF plotting dispatcher
 - **`create_fixed_marker_vaf_plots()`**: Fixed marker VAF tracking
 - **`create_dynamic_marker_vaf_plots()`**: Dynamic marker VAF tracking
+- **`create_dynamic_marker_selection_plot()`**: Marker selection heatmap for dynamic mode
 - **`save_visualization_summary()`**: JSON summary of generated plots
 
 ### Integration Completed
@@ -66,12 +75,19 @@ A comprehensive visualization module with clean, modular functions:
 ## Output Structure
 ```
 {patient_id}/
-├── {mode}_marker_analysis/
+├── fixed_marker_analysis/
 │   └── visualizations/
-│       ├── {patient_id}_{mode}_phylogenetic_tree.png
-│       ├── {patient_id}_{mode}_tree_evolution.png
-│       ├── {patient_id}_{mode}_marker_vaf.png
+│       ├── {patient_id}_fixed_phylogenetic_tree.png
+│       ├── {patient_id}_fixed_tree_evolution.png
+│       ├── {patient_id}_fixed_marker_vaf.png
 │       └── visualization_summary.json
+└── dynamic_marker_analysis/
+    └── visualizations/
+        ├── {patient_id}_dynamic_phylogenetic_tree.png
+        ├── {patient_id}_dynamic_tree_evolution.png
+        ├── {patient_id}_dynamic_marker_vaf.png
+        ├── {patient_id}_dynamic_marker_selection.png
+        └── visualization_summary.json
 ```
 
 ## Implementation Guidelines ✅ FOLLOWED

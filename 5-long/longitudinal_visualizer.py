@@ -72,6 +72,12 @@ def create_visualization_plots(analysis_mode: str, patient_id: str, output_dir: 
             analysis_mode, patient_id, viz_dir, results_summary, timepoint_data, logger)
         plot_files['vaf_plots'] = vaf_plot
         
+        # 4. Dynamic Marker Selection Plot - dynamic mode only
+        if analysis_mode == 'dynamic':
+            marker_selection_plot = create_dynamic_marker_selection_plot(
+                patient_id, viz_dir, results_summary, logger)
+            plot_files['marker_selection'] = marker_selection_plot
+        
         logger.info(f"Successfully created all visualization plots")
         logger.info(f"Plots saved in: {viz_dir}")
         
@@ -453,6 +459,122 @@ def create_dynamic_marker_vaf_plots(patient_id: str, viz_dir: Path, results_summ
         return None
 
 
+def create_dynamic_marker_selection_plot(patient_id: str, viz_dir: Path, 
+                                        results_summary: Dict, logger: logging.Logger) -> Optional[str]:
+    """
+    Create marker selection plot for dynamic analysis showing which markers 
+    are selected at each timepoint from the optimization step.
+    
+    X-axis: Time points
+    Y-axis: Available markers (bins)
+    Fill: Whether marker was selected at that timepoint
+    """
+    logger.info("Creating dynamic marker selection plot")
+    
+    try:
+        # Get marker selections from all timepoints
+        all_marker_selections = results_summary.get('all_marker_selections', [])
+        
+        if not all_marker_selections:
+            logger.warning("No marker selections found for dynamic selection plot")
+            return None
+        
+        # Extract all unique markers and timepoints
+        all_markers = set()
+        timepoints = []
+        
+        for selection in all_marker_selections:
+            selected_gene_names = selection.get('selected_gene_names', [])
+            all_markers.update(selected_gene_names)
+            timepoints.append(selection['timepoint'])
+        
+        if not all_markers:
+            logger.warning("No markers found in selection data")
+            return None
+        
+        # Sort markers and timepoints for consistent ordering
+        sorted_markers = sorted(list(all_markers))
+        sorted_timepoints = sorted(timepoints)
+        
+        logger.info(f"Creating selection plot with {len(sorted_markers)} markers across {len(sorted_timepoints)} timepoints")
+        
+        # Create selection matrix (markers x timepoints)
+        # 1 = selected, 0 = not selected
+        selection_matrix = np.zeros((len(sorted_markers), len(sorted_timepoints)))
+        
+        for t_idx, timepoint in enumerate(sorted_timepoints):
+            # Find the selection data for this timepoint
+            timepoint_selection = None
+            for selection in all_marker_selections:
+                if selection['timepoint'] == timepoint:
+                    timepoint_selection = selection
+                    break
+            
+            if timepoint_selection:
+                selected_markers = timepoint_selection.get('selected_gene_names', [])
+                for marker in selected_markers:
+                    if marker in sorted_markers:
+                        marker_idx = sorted_markers.index(marker)
+                        selection_matrix[marker_idx, t_idx] = 1
+        
+        # Create the heatmap plot
+        plt.figure(figsize=(max(8, len(sorted_timepoints) * 0.8), max(6, len(sorted_markers) * 0.4)))
+        
+        # Create heatmap 
+        # Use a simple colormap for selected (dark) vs not selected (light)
+        # Create the heatmap
+        im = plt.imshow(selection_matrix, cmap='Blues', aspect='auto', interpolation='nearest')
+        
+        # Customize the plot
+        plt.title(f'{patient_id} - Dynamic Marker Selection Over Time\n'
+                 f'Dark = Selected, Light = Not Selected', 
+                 fontsize=14, fontweight='bold', pad=20)
+        
+        # Set axis labels and ticks
+        plt.xlabel('Timepoint', fontweight='bold', fontsize=12)
+        plt.ylabel('Markers', fontweight='bold', fontsize=12)
+        
+        # Set timepoint labels
+        plt.xticks(range(len(sorted_timepoints)), sorted_timepoints, rotation=45 if len(sorted_timepoints) > 6 else 0)
+        
+        # Set marker labels - truncate long names for readability
+        marker_labels = []
+        for marker in sorted_markers:
+            if len(marker) > 20:
+                # Truncate long marker names
+                marker_labels.append(marker[:20] + '...')
+            else:
+                marker_labels.append(marker)
+        
+        plt.yticks(range(len(sorted_markers)), marker_labels, fontsize=10)
+        
+        # Add grid for better readability
+        plt.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
+        
+        # Add colorbar with custom labels
+        cbar = plt.colorbar(im, shrink=0.8)
+        cbar.set_ticks([0, 1])
+        cbar.set_ticklabels(['Not Selected', 'Selected'])
+        cbar.set_label('Selection Status', rotation=270, labelpad=20, fontweight='bold')
+        
+        # Adjust layout to prevent label cutoff
+        plt.tight_layout()
+        
+        # Save the plot
+        selection_plot_path = viz_dir / f'{patient_id}_dynamic_marker_selection.png'
+        plt.savefig(selection_plot_path, dpi=300, bbox_inches='tight', facecolor='white')
+        plt.close()
+        
+        logger.info(f"Saved dynamic marker selection plot: {selection_plot_path}")
+        logger.info(f"Plot shows {len(sorted_markers)} markers across {len(sorted_timepoints)} timepoints")
+        
+        return str(selection_plot_path)
+        
+    except Exception as e:
+        logger.error(f"Error creating dynamic marker selection plot: {e}")
+        return None
+
+
 def save_visualization_summary(viz_dir: Path, plot_files: Dict[str, str], 
                               analysis_mode: str, patient_id: str) -> Path:
     """
@@ -477,6 +599,10 @@ def save_visualization_summary(viz_dir: Path, plot_files: Dict[str, str],
             'vaf_plots': f'VAF plots for {analysis_mode} markers over time'
         }
     }
+    
+    # Add marker selection plot description for dynamic mode
+    if analysis_mode == 'dynamic' and 'marker_selection' in plot_files:
+        summary_data['description']['marker_selection'] = 'Heatmap showing which markers are selected at each timepoint'
     
     summary_file = viz_dir / 'visualization_summary.json'
     with open(summary_file, 'w') as f:
