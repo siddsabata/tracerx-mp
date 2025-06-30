@@ -103,8 +103,8 @@ fi
 echo "Gurobi verification successful."
 
 # --- Script Paths and Execution ---
-# Use the absolute path to the run_data_multi_sample.py script based on the provided code directory
-MARKER_SCRIPT_PATH="${CODE_DIR}/4-markers/run_data_multi_sample.py"
+# Use the absolute path to the step4_run_data_multi_sample.py script based on the provided code directory
+MARKER_SCRIPT_PATH="${CODE_DIR}/4-markers/step4_run_data_multi_sample.py"
 
 # Debug: Print the actual script path being used
 echo "DEBUG: Marker script path: $MARKER_SCRIPT_PATH"
