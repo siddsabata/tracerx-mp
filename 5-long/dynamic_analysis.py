@@ -16,6 +16,7 @@ from datetime import datetime
 from typing import Dict, List, Tuple
 from optimize_fraction import select_markers_tree_gp
 from tree_updater import process_ddpcr_measurements, update_tree_distribution, prepare_tree_components_for_analysis
+from longitudinal_visualizer import create_visualization_plots, save_visualization_summary
 
 logger = logging.getLogger(__name__)
 
@@ -211,6 +212,20 @@ def run_dynamic_marker_analysis(args, logger: logging.Logger, tree_distribution_
     dynamic_results_file = output_dir / 'dynamic_marker_analysis' / 'dynamic_marker_results.json'
     with open(dynamic_results_file, 'w') as f:
         json.dump(results_summary, f, indent=2, default=str)
+    
+    # Generate visualization plots
+    logger.info("Generating visualization plots for dynamic marker analysis")
+    try:
+        plot_files = create_visualization_plots(
+            'dynamic', args.patient_id, output_dir, results_summary, timepoint_data, logger)
+        
+        # Save visualization summary
+        viz_dir = output_dir / 'dynamic_marker_analysis' / 'visualizations'
+        save_visualization_summary(viz_dir, plot_files, 'dynamic', args.patient_id)
+        
+        logger.info("Successfully generated all visualization plots")
+    except Exception as e:
+        logger.warning(f"Failed to generate visualization plots: {e}")
     
     logger.info(f"Dynamic marker analysis completed successfully")
     logger.info(f"Results saved to: {output_dir / 'dynamic_marker_analysis'}")
