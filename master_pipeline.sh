@@ -1,15 +1,22 @@
 #!/bin/bash
 # Master Pipeline Script for TracerX Marker Selection Pipeline (Steps 1-4)
-# Usage: sbatch master_pipeline.sh config.yaml
-# OR:    bash master_pipeline.sh config.yaml [--dry-run]
+# This script runs on the login node and submits individual SLURM jobs for each pipeline step
+# Usage: bash master_pipeline.sh config.yaml [--dry-run]
+# Example: bash master_pipeline.sh configs/test_analysis.yaml
+# Example: bash master_pipeline.sh configs/test_analysis.yaml --dry-run
 
 set -e  # Exit on any error
+
+# --- Activate conda environment for YAML parsing ---
+echo "Activating markers_env conda environment for YAML parsing..."
+source $(conda info --base)/etc/profile.d/conda.sh
+conda activate markers_env
 
 # --- Input Validation ---
 if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
     echo "Error: Incorrect number of arguments."
     echo "Usage: $0 <config.yaml> [--dry-run]"
-    echo "Example: sbatch $0 configs/standard_analysis.yaml"
+    echo "Example: bash $0 configs/standard_analysis.yaml"
     echo "Example: bash $0 configs/test_analysis.yaml --dry-run"
     exit 1
 fi
