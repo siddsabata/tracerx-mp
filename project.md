@@ -77,6 +77,18 @@ The enhancement phase focused on **improving existing pipeline capabilities** an
 - ✅ **Multiple fallback strategies**: Normal approximation, error bounds, and graceful degradation
 - ✅ **Integration robustness**: Enhanced numerical integration with improved tolerances
 
+#### Bayesian Algorithm Determinism Fix
+- ✅ **Critical non-determinism bug resolved**: Fixed random marker pair selection in Bayesian tree updating
+- ✅ **Root cause identified**: `adjust_tree_distribution_struct_bayesian()` was randomly selecting 2 markers from available set
+- ✅ **Comprehensive solution implemented**: Now uses ALL marker pairs for complete evidence integration
+- ✅ **Algorithm enhancement**: Changed from `random.choice(combinations(markers, 2))` to `list(combinations(markers, 2))`
+- ✅ **Information utilization**: For n markers, now processes C(n,2) = n×(n-1)/2 pairs instead of 1 random pair
+- ✅ **Clinical reproducibility**: Fixed marker analysis now produces identical results for identical inputs
+- ✅ **Dynamic analysis optimization**: Dynamic marker selection now properly utilizes all selected markers
+- ✅ **Backward compatibility**: Legacy function maintained while new implementation provides robust evidence combination
+
+**Impact**: Eliminates the major source of non-deterministic behavior where identical fixed marker configurations produced drastically different convergence metrics. Both fixed and dynamic analysis modes now utilize all available marker information instead of randomly discarding valuable evidence.
+
 ### Major Refactoring (Modular Architecture v2.0) ✅ COMPLETED
 
 #### Code Structure Simplification
