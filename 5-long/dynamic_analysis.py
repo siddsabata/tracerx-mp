@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple
-from optimize import select_markers_tree_gp
+from optimize_fraction import select_markers_tree_gp
 from tree_updater import process_ddpcr_measurements, update_tree_distribution, prepare_tree_components_for_analysis
 
 logger = logging.getLogger(__name__)
