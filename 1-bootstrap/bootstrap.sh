@@ -55,15 +55,15 @@ fi
 echo "Conda environment preprocess_env activated successfully."
 
 # --- Run Bootstrap Script ---
-echo "Running bootstrap.py..."
+echo "Running step1_bootstrap.py..."
 
-# Use the absolute path to the bootstrap.py file based on the provided code directory
-BOOTSTRAP_PY_PATH="${CODE_DIR}/1-bootstrap/bootstrap.py"
-echo "Using bootstrap.py at: $BOOTSTRAP_PY_PATH"
+# Use the absolute path to the step1_bootstrap.py file based on the provided code directory
+BOOTSTRAP_PY_PATH="${CODE_DIR}/1-bootstrap/step1_bootstrap.py"
+echo "Using step1_bootstrap.py at: $BOOTSTRAP_PY_PATH"
 
-# Verify the bootstrap.py file exists
+# Verify the step1_bootstrap.py file exists
 if [ ! -f "$BOOTSTRAP_PY_PATH" ]; then
-    echo "Error: Could not find bootstrap.py at $BOOTSTRAP_PY_PATH"
+    echo "Error: Could not find step1_bootstrap.py at $BOOTSTRAP_PY_PATH"
     echo "Current working directory: $(pwd)"
     echo "Files in code directory: $(ls -la $CODE_DIR/1-bootstrap/)"
     exit 1
@@ -76,9 +76,9 @@ python3 "$BOOTSTRAP_PY_PATH" \
 
 SCRIPT_EXIT_CODE=$?
 if [ $SCRIPT_EXIT_CODE -eq 0 ]; then
-    echo "bootstrap.py completed successfully."
+    echo "step1_bootstrap.py completed successfully."
 else
-    echo "Error: bootstrap.py script failed with exit code $SCRIPT_EXIT_CODE."
+    echo "Error: step1_bootstrap.py script failed with exit code $SCRIPT_EXIT_CODE."
     exit $SCRIPT_EXIT_CODE
 fi
 
