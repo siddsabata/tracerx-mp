@@ -7,12 +7,12 @@ analysis_type: "test"
 
 # Input files and directories - UPDATE THESE PATHS FOR YOUR ENVIRONMENT
 input:
-  ssm_file: "/path/to/data/ssm_subset.txt"  # 5-mutation subset for testing
-  code_dir: "/path/to/tracerx-mp/"
+  ssm_file: "/home/ssabata/tracerx-mp/data/ssm_subset.txt"  # 5-mutation subset for testing
+  code_dir: "/home/ssabata/tracerx-mp/tracerx-mp/"
 
 # Output configuration  
 output:
-  base_dir: "/path/to/patient_data/CRUK0044_test/"
+  base_dir: "/home/ssabata/patient_data/cruk0044_test/"
   create_subdirs: true
   log_level: "DEBUG"  # More verbose logging for testing
 
@@ -30,7 +30,7 @@ phylowgs:
 aggregation:
   method: "phylowgs"
   generate_visualizations: true
-  sample_prefix: "Test_Region"
+  sample_prefix: "CRUK0044_test"
   custom_sample_names: ["Primary", "Met1", "Met2"]  # Example custom names
 
 # Step 4: Marker selection configuration
