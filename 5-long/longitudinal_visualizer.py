@@ -517,8 +517,8 @@ def create_dynamic_marker_selection_plot(patient_id: str, viz_dir: Path,
                         marker_idx = sorted_markers.index(marker)
                         selection_matrix[marker_idx, t_idx] = 1
         
-        # Create the heatmap plot
-        plt.figure(figsize=(max(8, len(sorted_timepoints) * 0.8), max(6, len(sorted_markers) * 0.4)))
+        # Create the heatmap plot - make taller for better marker name visibility
+        plt.figure(figsize=(max(8, len(sorted_timepoints) * 0.8), max(8, len(sorted_markers) * 0.6)))
         
         # Create heatmap 
         # Use a simple colormap for selected (dark) vs not selected (light)
@@ -534,28 +534,14 @@ def create_dynamic_marker_selection_plot(patient_id: str, viz_dir: Path,
         plt.xlabel('Timepoint', fontweight='bold', fontsize=12)
         plt.ylabel('Markers', fontweight='bold', fontsize=12)
         
-        # Set timepoint labels
-        plt.xticks(range(len(sorted_timepoints)), sorted_timepoints, rotation=45 if len(sorted_timepoints) > 6 else 0)
+        # Set timepoint labels - always slant them
+        plt.xticks(range(len(sorted_timepoints)), sorted_timepoints, rotation=45)
         
-        # Set marker labels - truncate long names for readability
-        marker_labels = []
-        for marker in sorted_markers:
-            if len(marker) > 20:
-                # Truncate long marker names
-                marker_labels.append(marker[:20] + '...')
-            else:
-                marker_labels.append(marker)
-        
-        plt.yticks(range(len(sorted_markers)), marker_labels, fontsize=10)
+        # Set marker labels - use smaller font size for better fit, don't truncate
+        plt.yticks(range(len(sorted_markers)), sorted_markers, fontsize=8)
         
         # Add grid for better readability
         plt.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
-        
-        # Add colorbar with custom labels
-        cbar = plt.colorbar(im, shrink=0.8)
-        cbar.set_ticks([0, 1])
-        cbar.set_ticklabels(['Not Selected', 'Selected'])
-        cbar.set_label('Selection Status', rotation=270, labelpad=20, fontweight='bold')
         
         # Adjust layout to prevent label cutoff
         plt.tight_layout()
