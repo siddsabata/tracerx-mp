@@ -199,10 +199,10 @@ def create_tree_evolution_plot(analysis_mode: str, patient_id: str, viz_dir: Pat
         # Find trees with meaningful frequencies (>1%)
         n_trees = len(all_tree_frequencies[0])
         for tree_idx in range(n_trees):
-            tree_freqs_over_time = [freqs[tree_idx] for freqs in all_tree_frequencies]
+            tree_freqs_over_time = [freqs[tree_idx] for freqs in all_tree_frequencies]  # Already in percentage scale
             
             # Only plot trees that have significant frequency at some point
-            if max(tree_freqs_over_time) > 0.01:  # 1% threshold
+            if max(tree_freqs_over_time) > 1.0:  # 1% threshold
                 # Color by whether frequency increases or decreases
                 final_freq = tree_freqs_over_time[-1]
                 initial_freq = tree_freqs_over_time[0]
@@ -221,7 +221,7 @@ def create_tree_evolution_plot(analysis_mode: str, patient_id: str, viz_dir: Pat
         
         # Customize the plot
         plt.xlabel('Timepoint', fontweight='bold', fontsize=12)
-        plt.ylabel('Tree Weight/Frequency', fontweight='bold', fontsize=12)
+        plt.ylabel('Tree Weight/Frequency (%)', fontweight='bold', fontsize=12)
         plt.title(f'{patient_id} - Tree Evolution Over Time ({analysis_mode.title()} Analysis)',
                  fontsize=14, fontweight='bold')
         
@@ -235,7 +235,7 @@ def create_tree_evolution_plot(analysis_mode: str, patient_id: str, viz_dir: Pat
         # Set x-axis to show integer timepoints
         plt.xticks(timepoints)
         plt.xlim(-0.1, max(timepoints) + 0.1)
-        plt.ylim(0, 1.05)
+        plt.ylim(0, 100)  # 0-100% since frequencies are already in percentage scale
         
         # Save the plot
         evolution_plot_path = viz_dir / f'{patient_id}_{analysis_mode}_tree_evolution.png'
