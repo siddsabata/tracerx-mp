@@ -7,24 +7,24 @@ analysis_type: "standard"  # Options: standard, test, high_depth
 
 # Input files and directories - UPDATE THESE PATHS FOR YOUR ENVIRONMENT
 input:
-  ssm_file: "/path/to/data/ssm.txt"
-  code_dir: "/path/to/tracerx-mp/"  # Base directory of the TracerX-MP repository
+  ssm_file: "/home/ssabata/tracerx-mp/data/ssm.txt"
+  code_dir: "/home/ssabata/tracerx-mp/"  # Base directory of the TracerX-MP repository
 
 # Output configuration
 output:
-  base_dir: "/path/to/patient_data/CRUK0044/"  # Patient base directory
+  base_dir: "/home/ssabata/patient_data/cruk0044_full_test/"  # Patient base directory
   create_subdirs: true
   log_level: "INFO"  # Options: DEBUG, INFO, WARNING, ERROR
 
 # Step 1: Bootstrap configuration
 bootstrap:
   num_bootstraps: 100  # Number of bootstrap samples to generate
-  random_seed: null    # Set to integer for reproducible results, null for random
+  random_seed: 42    # Set to integer for reproducible results, null for random
 
 # Step 2: PhyloWGS configuration  
 phylowgs:
   num_chains: 5      # Number of MCMC chains to run
-  parallel_limit: 10  # Maximum number of parallel jobs in SLURM array
+  parallel_limit: 50  # Maximum number of parallel jobs in SLURM array
 
 # Step 3: Aggregation configuration
 aggregation:
@@ -52,7 +52,7 @@ hpc:
   bootstrap:
     partition: "pool1"
     cpus_per_task: 2
-    memory: "8G"
+    memory: "16G"
     walltime: "02:00:00"
     conda_env: "preprocess_env"
   
@@ -62,7 +62,7 @@ hpc:
     memory: "8G"
     walltime: "12:00:00"
     conda_env: "phylowgs_env"
-    array_throttle: 10  # %10 in SLURM array syntax
+    array_throttle: 50  # %10 in SLURM array syntax
   
   aggregation:
     partition: "pool1"
