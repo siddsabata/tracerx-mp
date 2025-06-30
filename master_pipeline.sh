@@ -266,7 +266,16 @@ submit_job_yaml() {
     
     # Add dependency if specified
     if [ ! -z "$dependency_flag" ]; then
-        sbatch_cmd_array+=("$dependency_flag")
+        # For jobs that depend on array jobs (like aggregation depending on phylowgs),
+        # use 'afterany' instead of 'afterok' to allow partial bootstrap failures
+        if [ "$job_name" = "aggregation" ] || [ "$job_name" = "marker_selection" ]; then
+            # These jobs depend on array jobs where some elements may fail (bootstraps)
+            # Use afterany to proceed when array job completes (regardless of individual element success)
+            local modified_dependency=$(echo "$dependency_flag" | sed 's/afterok/afterany/')
+            sbatch_cmd_array+=("$modified_dependency")
+        else
+            sbatch_cmd_array+=("$dependency_flag")
+        fi
     fi
     
     # Add array configuration for phylowgs
