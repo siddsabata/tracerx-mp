@@ -3,7 +3,7 @@
 
 # Patient and analysis identification
 patient_id: "CRUK0044"
-analysis_mode: "fixed"  
+analysis_mode: "fixed"
 # Using fixed markers specified by clinical team
 
 # Input file paths - UPDATE THESE PATHS FOR YOUR ENVIRONMENT
