@@ -466,7 +466,7 @@ def create_dynamic_marker_selection_plot(patient_id: str, viz_dir: Path,
     are selected at each timepoint from the optimization step.
     
     X-axis: Time points
-    Y-axis: Available markers (bins)
+    Y-axis: Markers that were actually selected during the analysis
     Fill: Whether marker was selected at that timepoint
     """
     logger.info("Creating dynamic marker selection plot")
@@ -479,7 +479,7 @@ def create_dynamic_marker_selection_plot(patient_id: str, viz_dir: Path,
             logger.warning("No marker selections found for dynamic selection plot")
             return None
         
-        # Extract all unique markers and timepoints
+        # Extract all unique markers that were selected across all timepoints
         all_markers = set()
         timepoints = []
         
@@ -517,31 +517,54 @@ def create_dynamic_marker_selection_plot(patient_id: str, viz_dir: Path,
                         marker_idx = sorted_markers.index(marker)
                         selection_matrix[marker_idx, t_idx] = 1
         
-        # Create the heatmap plot - make taller for better marker name visibility
-        plt.figure(figsize=(max(8, len(sorted_timepoints) * 0.8), max(8, len(sorted_markers) * 0.6)))
+        # Create the heatmap plot using seaborn for clean boxes
+        # Make it much larger for better readability
+        fig_height = max(12, len(sorted_markers) * 0.4)  # At least 12 inches, scale with markers
+        fig_width = max(10, len(sorted_timepoints) * 1.2)  # At least 10 inches, scale with timepoints
         
-        # Create heatmap 
-        # Use a simple colormap for selected (dark) vs not selected (light)
-        # Create the heatmap
-        im = plt.imshow(selection_matrix, cmap='Blues', aspect='auto', interpolation='nearest')
+        plt.figure(figsize=(fig_width, fig_height))
+        
+        # Convert matrix to DataFrame for seaborn
+        df_selection = pd.DataFrame(
+            selection_matrix, 
+            index=sorted_markers, 
+            columns=sorted_timepoints
+        )
+        
+        # Create clean heatmap with seaborn
+        ax = sns.heatmap(
+            df_selection,
+            cmap='Blues',  # Dark blue for selected, light for not selected
+            cbar_kws={'label': 'Selection Status'},
+            linewidths=0.5,  # Add thin lines between cells for cleaner separation
+            linecolor='white',
+            square=False,  # Allow rectangular cells
+            xticklabels=True,
+            yticklabels=True,
+            vmin=0,  # Ensure consistent color scaling
+            vmax=1
+        )
         
         # Customize the plot
         plt.title(f'{patient_id} - Dynamic Marker Selection Over Time\n'
                  f'Dark = Selected, Light = Not Selected', 
-                 fontsize=14, fontweight='bold', pad=20)
+                 fontsize=16, fontweight='bold', pad=20)
         
-        # Set axis labels and ticks
-        plt.xlabel('Timepoint', fontweight='bold', fontsize=12)
-        plt.ylabel('Markers', fontweight='bold', fontsize=12)
+        # Set axis labels
+        plt.xlabel('Timepoint', fontweight='bold', fontsize=14)
+        plt.ylabel('Markers', fontweight='bold', fontsize=14)
         
-        # Set timepoint labels - always slant them
-        plt.xticks(range(len(sorted_timepoints)), sorted_timepoints, rotation=45)
+        # Customize axis ticks
+        # Rotate timepoint labels for better readability
+        plt.xticks(rotation=45, ha='right', fontsize=10)
         
-        # Set marker labels - use smaller font size for better fit, don't truncate
-        plt.yticks(range(len(sorted_markers)), sorted_markers, fontsize=8)
+        # Set marker labels with smaller font for better fit
+        plt.yticks(fontsize=8, rotation=0)
         
-        # Add grid for better readability
-        plt.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
+        # Customize colorbar
+        cbar = ax.collections[0].colorbar
+        cbar.set_ticks([0, 1])
+        cbar.set_ticklabels(['Not Selected', 'Selected'])
         
         # Adjust layout to prevent label cutoff
         plt.tight_layout()
@@ -558,6 +581,8 @@ def create_dynamic_marker_selection_plot(patient_id: str, viz_dir: Path,
         
     except Exception as e:
         logger.error(f"Error creating dynamic marker selection plot: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         return None
 
 
