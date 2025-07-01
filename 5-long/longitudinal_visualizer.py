@@ -535,7 +535,7 @@ def create_dynamic_marker_selection_plot(patient_id: str, viz_dir: Path,
         ax = sns.heatmap(
             df_selection,
             cmap='Blues',  # Dark blue for selected, light for not selected
-            cbar_kws={'label': 'Selection Status'},
+            cbar=False,  # Remove colorbar since selection status is obvious from colors
             linewidths=0.5,  # Add thin lines between cells for cleaner separation
             linecolor='white',
             square=False,  # Allow rectangular cells
@@ -560,11 +560,6 @@ def create_dynamic_marker_selection_plot(patient_id: str, viz_dir: Path,
         
         # Set marker labels with smaller font for better fit
         plt.yticks(fontsize=8, rotation=0)
-        
-        # Customize colorbar
-        cbar = ax.collections[0].colorbar
-        cbar.set_ticks([0, 1])
-        cbar.set_ticklabels(['Not Selected', 'Selected'])
         
         # Adjust layout to prevent label cutoff
         plt.tight_layout()
