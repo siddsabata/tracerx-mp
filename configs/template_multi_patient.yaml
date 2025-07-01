@@ -1,0 +1,93 @@
+# TracerX Marker Selection Pipeline - Multi-Patient Template Configuration
+# This template is used by multi_patient_pipeline.sh to generate patient-specific configs
+# Placeholders (PLACEHOLDER_*) will be automatically replaced with patient-specific values
+
+# Patient and analysis identification (will be replaced with actual patient ID)
+patient_id: "PLACEHOLDER_PATIENT_ID"
+analysis_type: "multi_patient"
+
+# Input files and directories (placeholders will be replaced automatically)
+input:
+  ssm_file: "PLACEHOLDER_SSM_FILE"      # Path to patient's SSM file
+  code_dir: "PLACEHOLDER_CODE_DIR"      # TracerX-MP repository directory
+
+# Output configuration (patient directory will be created automatically)
+output:
+  base_dir: "PLACEHOLDER_OUTPUT_DIR"    # Patient-specific output directory
+  create_subdirs: true
+  log_level: "INFO"
+
+# Step 1: Bootstrap configuration
+bootstrap:
+  num_bootstraps: 100    # Standard number of bootstrap samples
+  random_seed: null      # Random seed for reproducibility (null = random)
+
+# Step 2: PhyloWGS configuration
+phylowgs:
+  num_chains: 5         # Number of MCMC chains to run
+  parallel_limit: 20    # Maximum parallel jobs (conservative for multi-patient)
+
+# Step 3: Aggregation configuration
+aggregation:
+  method: "phylowgs"
+  generate_visualizations: true
+  sample_prefix: "Region"
+  custom_sample_names: []  # Empty = auto-generate sample names
+
+# Step 4: Marker selection configuration
+marker_selection:
+  read_depth: 1500
+  filter_strategy: "any_high"  # Conservative filtering strategy
+  filter_threshold: 0.9        # Conservative filtering threshold
+  filter_samples: []
+  
+  # Optimization parameters
+  optimization:
+    lambda1_values: [1.0, 0.0]  # Test both fraction and structure optimization
+    lambda2_values: [0.0, 1.0]  # Corresponds to lambda1_values
+    max_iterations: null        # Analyze all possible markers
+
+# HPC/SLURM configuration (conservative settings for multi-patient workload)
+hpc:
+  bootstrap:
+    partition: "pool1"
+    cpus_per_task: 2        # Conservative CPU allocation
+    memory: "8G"            # Standard memory allocation
+    walltime: "02:00:00"    # Standard walltime
+    conda_env: "preprocess_env"
+  
+  phylowgs:
+    partition: "pool1"
+    cpus_per_task: 2        # Conservative CPU allocation
+    memory: "8G"            # Standard memory allocation  
+    walltime: "04:00:00"    # Generous walltime for phylogenetic inference
+    conda_env: "phylowgs_env"
+    array_throttle: 20      # Conservative array throttling for multi-patient
+  
+  aggregation:
+    partition: "pool1"
+    cpus_per_task: 1
+    memory: "16G"           # Higher memory for aggregation
+    walltime: "02:00:00"
+    conda_env: "aggregation_env"
+  
+  marker_selection:
+    partition: "pool1"
+    cpus_per_task: 1
+    memory: "16G"           # Higher memory for optimization
+    walltime: "02:00:00"
+    conda_env: "markers_env"
+    modules: ["gurobi1102"]
+
+# Validation and debugging
+validation:
+  validate_inputs: true
+  check_dependencies: true
+  debug_mode: false       # Disable debug mode for multi-patient (reduces log volume)
+
+# Pipeline orchestration
+orchestration:
+  run_sequential: false   # Use job dependencies (standard approach)
+  cleanup_temp_files: true  # Clean up to save disk space
+  save_intermediate: true    # Save intermediate results
+  email_notifications: false # Disable email notifications for multi-patient 
