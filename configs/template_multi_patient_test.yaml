@@ -32,7 +32,7 @@ aggregation:
   method: "phylowgs"
   generate_visualizations: true
   sample_prefix: "Test"
-  custom_sample_names: []
+  custom_sample_names: []  # Empty = auto-generate sample names
 
 # Step 4: Marker selection configuration (simplified for testing)
 marker_selection:
