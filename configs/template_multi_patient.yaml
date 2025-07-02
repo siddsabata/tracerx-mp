@@ -25,7 +25,7 @@ bootstrap:
 # Step 2: PhyloWGS configuration  
 phylowgs:
   num_chains: 5        # Number of MCMC chains to run
-  parallel_limit: 20   # Conservative limit for multi-patient workloads (vs 50 for single)
+  parallel_limit: 10   # Conservative limit for multi-patient workloads (vs 50 for single)
 
 # Step 3: Aggregation configuration
 aggregation:
@@ -59,11 +59,11 @@ hpc:
   
   phylowgs:
     partition: "pool1" 
-    cpus_per_task: 2        # Reduced from 5 for multi-patient efficiency
+    cpus_per_task: 5        # Reduced from 5 for multi-patient efficiency
     memory: "8G"            # Standard memory allocation
     walltime: "04:00:00"    # Reduced from 12h for faster multi-patient throughput
     conda_env: "phylowgs_env"
-    array_throttle: 20      # Conservative throttling for multi-patient (vs 50)
+    array_throttle: 10      # Conservative throttling for multi-patient (vs 50)
   
   aggregation:
     partition: "pool1"
