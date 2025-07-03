@@ -11,7 +11,6 @@ import pickle
 from analyze import *
 import math
 from scipy.integrate import quad
-import random
 
 def adjust_tree_distribution_struct(tree_list, node_dict_list, read_depth, ddpcr_marker_counts, marker_idx2gene, alpha):
     accepted_tree_indices = []
@@ -34,28 +33,96 @@ def adjust_tree_distribution_frac(clonal_freq_list,node_dict_list, read_depth, d
     return accepted_tree_indices
 
 def adjust_tree_distribution_struct_bayesian(tree_list, node_dict_list, tree_freq_list, read_depth, ddpcr_marker_counts, marker_idx2gene):
+    """
+    Update tree distribution using Bayesian inference with ALL available markers.
+    
+    MAJOR FIX: This version uses all marker pairs instead of randomly selecting one,
+    providing deterministic and more robust tree updates. This resolves the 
+    non-deterministic behavior where identical inputs produced different results.
+    
+    For n markers, this processes C(n,2) = n*(n-1)/2 marker pairs and combines
+    their likelihood evidence to update tree frequencies.
+    """
     updated_tree_freq_list = []
-    marker_idx_list = random.choice(list(combinations(list(range(len(ddpcr_marker_counts))), 2)))
-    print(marker_idx_list)
+    n_markers = len(ddpcr_marker_counts)
+    
+    # Handle edge case: only 1 marker (can't form pairs)
+    if n_markers < 2:
+        print(f"Warning: Only {n_markers} marker(s) available. Need at least 2 for pairwise analysis.")
+        return tree_freq_list  # Return unchanged frequencies
+    
+    # Generate ALL marker pairs instead of randomly selecting one
+    all_marker_pairs = list(combinations(range(n_markers), 2))
+    print(f"Using all {len(all_marker_pairs)} marker pairs: {all_marker_pairs}")
+    
     for tree_idx in range(len(tree_list)):
         tree_structure = tree_list[tree_idx]
         node_dict = node_dict_list[tree_idx]
         tree_freq = tree_freq_list[tree_idx]
-        updated_tree_freq = update_single_tree_fractions(tree_structure, node_dict, tree_freq, read_depth, ddpcr_marker_counts, marker_idx2gene, marker_idx_list)
+        
+        # Calculate combined likelihood from ALL marker pairs
+        combined_likelihood = 1.0  # Start with neutral likelihood
+        
+        for marker_pair in all_marker_pairs:
+            pair_likelihood = calculate_single_pair_likelihood(
+                tree_structure, node_dict, read_depth, ddpcr_marker_counts, 
+                marker_idx2gene, marker_pair)
+            combined_likelihood *= pair_likelihood
+            
+        # Update tree frequency with combined evidence
+        updated_tree_freq = tree_freq * combined_likelihood
         updated_tree_freq_list.append(updated_tree_freq)
+    
+    # Normalize frequencies to sum to 100
     updated_tree_freq_list_np = np.array(updated_tree_freq_list)
-    updated_tree_freq_list_np /= np.sum(updated_tree_freq_list_np) / 100
+    total_freq = np.sum(updated_tree_freq_list_np)
+    if total_freq > 0:
+        updated_tree_freq_list_np = (updated_tree_freq_list_np / total_freq) * 100
+    else:
+        # Fallback: uniform distribution if all likelihoods are zero
+        updated_tree_freq_list_np = np.ones(len(tree_list)) * (100.0 / len(tree_list))
+        print("Warning: All tree likelihoods were zero, using uniform distribution")
+    
     return updated_tree_freq_list_np.tolist()
 
-def update_single_tree_fractions(tree_structure, node_dict, tree_freq, read_depth_list, ddpcr_marker_counts, marker_idx2gene, marker_idx_list, lower_bound=0, upper_bound=1):
-    n_markers = len(ddpcr_marker_counts)
+def calculate_single_pair_likelihood(tree_structure, node_dict, read_depth_list, ddpcr_marker_counts, marker_idx2gene, marker_pair, lower_bound=0, upper_bound=1):
+    """
+    Calculate the likelihood for a single pair of markers given a tree structure.
+    
+    Args:
+        tree_structure: Phylogenetic tree structure
+        node_dict: Mapping of nodes to mutations
+        read_depth_list: List of read depths for each marker
+        ddpcr_marker_counts: List of mutant counts for each marker
+        marker_idx2gene: Mapping from marker index to gene name
+        marker_pair: Tuple of (marker_idx1, marker_idx2)
+        lower_bound: Lower bound for VAF integration
+        upper_bound: Upper bound for VAF integration
+        
+    Returns:
+        Conditional probability (likelihood) for this marker pair
+    """
+    marker_idx1, marker_idx2 = marker_pair
     a2d_matrix = ancestor2descendant(tree_structure)
     mut2node_dict = mut2node(node_dict)
-    [marker_idx1, marker_idx2] = marker_idx_list
-    node1, node2 = mut2node_dict[marker_idx2gene[marker_idx1]], mut2node_dict[marker_idx2gene[marker_idx2]]
+    
+    # Get nodes for each marker
+    gene1 = marker_idx2gene[marker_idx1]
+    gene2 = marker_idx2gene[marker_idx2]
+    
+    if gene1 not in mut2node_dict or gene2 not in mut2node_dict:
+        print(f"Warning: Marker {gene1} or {gene2} not found in tree. Skipping this pair.")
+        return 1.0  # Neutral likelihood
+    
+    node1, node2 = mut2node_dict[gene1], mut2node_dict[gene2]
+    
+    # Prepare data for likelihood calculation
     read_depth_sublist = [int(np.round(read_depth_list[marker_idx1])), int(np.round(read_depth_list[marker_idx2]))]
     read_counts_sublist = [int(np.round(ddpcr_marker_counts[marker_idx1])), int(np.round(ddpcr_marker_counts[marker_idx2]))]
-    print(read_depth_sublist, read_counts_sublist)
+    
+    print(f"Marker pair ({gene1}, {gene2}): depths={read_depth_sublist}, counts={read_counts_sublist}")
+    
+    # Determine phylogenetic relationship
     if node1 == node2:
         relation = 'same'
     elif a2d_matrix[node1, node2] == 1:
@@ -64,10 +131,36 @@ def update_single_tree_fractions(tree_structure, node_dict, tree_freq, read_dept
         relation = 'descendant'
     else:
         relation = 'null'
+    
+    print(f"Relationship: {relation}")
+    
+    # Calculate conditional probability based on relationship
     if relation == 'same':
-        conditional_prob = outer_integral_single(read_depth_sublist[0], read_depth_sublist[1], read_counts_sublist[0], read_counts_sublist[1], lower_bound, upper_bound)
+        conditional_prob = outer_integral_single(read_depth_sublist[0], read_depth_sublist[1], 
+                                               read_counts_sublist[0], read_counts_sublist[1], 
+                                               lower_bound, upper_bound)
+    elif relation == 'null':
+        # For unrelated markers, use neutral likelihood
+        conditional_prob = 1.0
+        print(f"Unrelated markers, using neutral likelihood")
     else:
-        conditional_prob = outer_integral(read_depth_sublist[0], read_depth_sublist[1], read_counts_sublist[0], read_counts_sublist[1], relation, lower_bound, upper_bound)
+        conditional_prob = outer_integral(read_depth_sublist[0], read_depth_sublist[1], 
+                                        read_counts_sublist[0], read_counts_sublist[1], 
+                                        relation, lower_bound, upper_bound)
+    
+    print(f"Conditional probability: {conditional_prob}")
+    return conditional_prob
+
+
+def update_single_tree_fractions(tree_structure, node_dict, tree_freq, read_depth_list, ddpcr_marker_counts, marker_idx2gene, marker_idx_list, lower_bound=0, upper_bound=1):
+    """
+    Legacy function - kept for backward compatibility.
+    Use calculate_single_pair_likelihood for new code.
+    """
+    marker_pair = tuple(marker_idx_list)
+    conditional_prob = calculate_single_pair_likelihood(
+        tree_structure, node_dict, read_depth_list, ddpcr_marker_counts, 
+        marker_idx2gene, marker_pair, lower_bound, upper_bound)
     updated_tree_freq = tree_freq * conditional_prob
     return updated_tree_freq
 
