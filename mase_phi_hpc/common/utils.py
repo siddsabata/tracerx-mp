@@ -157,3 +157,75 @@ def summarize_marker_usage(all_selections: List[Dict[str, Any]], log: logging.Lo
     _logger.info("Most frequently used: %s (%s times)", most_used_marker, max_usage)
 
     return usage_summary
+
+
+# ---------------------------------------------------------------------------
+# Statistical tests
+# ---------------------------------------------------------------------------
+
+def wald_test(
+    freq_hat_1: float,
+    freq_hat_2: float,
+    correction_rate: float,
+    *,
+    relation: str = "ancestor",
+    depth: int | float | List[int | float] = 100,
+    alpha: float = 0.05,
+) -> tuple[bool, float, float]:
+    """Perform a two-sample Wald test on clone frequencies.
+
+    The implementation consolidates the variants scattered across different
+    optimise scripts. It supports the three relationships used in the original
+    codebase (``ancestor``, ``descendant``, ``same``) and both scalar or
+    *pair-specific* depths.
+
+    Parameters
+    ----------
+    freq_hat_1, freq_hat_2
+        Observed frequencies of the two markers/clones (range 0-1).
+    correction_rate
+        Bonferroni correction factor (typically *n choose 2*).
+    relation
+        Phylogenetic relationship hypothesis being tested.
+    depth
+        Sequencing depth(s); either a single scalar applied to both markers or
+        a list/tuple with *[depth1, depth2]*.
+    alpha
+        Significance level.
+
+    Returns
+    -------
+    (reject_null, W, critical_value)
+        *reject_null* – *True* if the null hypothesis is rejected.
+        *W* – Wald statistic.
+        *critical_value* – corresponding cutoff value (signed).
+    """
+
+    import numpy as _np
+    from scipy.stats import norm as _norm  # local import to keep top-level deps minimal
+
+    if relation not in {"ancestor", "descendant", "same"}:
+        raise ValueError("relation must be 'ancestor', 'descendant' or 'same'")
+
+    # Normalise depth argument
+    if isinstance(depth, (list, tuple)):
+        depth1, depth2 = depth  # type: ignore[assignment]
+    else:
+        depth1 = depth2 = depth  # type: ignore[assignment]
+
+    var = (freq_hat_1 * (1 - freq_hat_1) / depth1) + (freq_hat_2 * (1 - freq_hat_2) / depth2)
+    if var == 0:
+        var = 1e-10  # avoid divide by zero
+
+    if relation == "ancestor":
+        W = (freq_hat_2 - freq_hat_1) / _np.sqrt(var)
+        z = _norm.ppf(alpha / correction_rate)
+    elif relation == "descendant":
+        W = (freq_hat_1 - freq_hat_2) / _np.sqrt(var)
+        z = _norm.ppf(alpha / correction_rate)
+    else:  # "same"
+        W = abs(freq_hat_1 - freq_hat_2) / _np.sqrt(var)
+        z = _norm.ppf(alpha / (2 * correction_rate))
+
+    reject = W > -z
+    return reject, float(W), float(-z)
