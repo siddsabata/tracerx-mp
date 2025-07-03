@@ -3,3 +3,34 @@ test/
 data/bootstraps/
 
 __pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+build/
+dist/
+*.egg-info/
+
+# Conda environments
+*.conda
+*.env
+
+# Virtual environments
+.venv/
+
+# VSCode & IDEs
+.vscode/
+.idea/
+
+# OS files
+Thumbs.db
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Logs
+*.log
