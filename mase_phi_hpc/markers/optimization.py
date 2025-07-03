@@ -245,3 +245,107 @@ def select_markers_fractions_weighted_overall(
     top_idx = np.argsort(weights)[::-1][:n_markers]
     selected = [gene_list[i] for i in top_idx]
     return selected, float(weights[top_idx].sum())
+
+# ---------------------------------------------------------------------------
+# Additional (simplified) selection flavours migrated from legacy scripts
+# ---------------------------------------------------------------------------
+
+def select_markers_fractions_weighted_single(
+    gene_list: List[str],
+    n_markers: int,
+    tree_list: List[Dict[int, List[int]]],
+    node_list: List[Dict[int, List[int]]],
+    clonal_freq_list: List[Dict[int, List[float]]],
+    tree_freq_list: List[float],
+    *,
+    idx_best: int = 0,
+    sample_idx: int = 0,
+) -> Tuple[List[str], float]:
+    """Marker selection focused on a *single* (best) bootstrap tree.
+
+    This is a light-weight adaptation of the original *select_markers_fractions_weighted_single*.
+    It simply delegates to the overall greedy selection but narrows the inputs
+    to the single tree specified by *idx_best*.
+    """
+
+    single_tree_list = [tree_list[idx_best]]
+    single_node_list = [node_list[idx_best]]
+    single_clonal_list = [clonal_freq_list[idx_best]]
+    single_freq = [tree_freq_list[idx_best]]
+
+    return select_markers_fractions_weighted_overall(
+        gene_list,
+        n_markers,
+        single_tree_list,
+        single_node_list,
+        single_clonal_list,
+        single_freq,
+        sample_idx=sample_idx,
+    )
+
+
+def select_markers_fractions_gp(
+    gene_list: List[str],
+    n_markers: int,
+    tree_list: List[Dict[int, List[int]]],
+    node_list: List[Dict[int, List[int]]],
+    tree_freq_list: List[float],
+) -> List[str]:
+    """Unweighted optimisation based on same-clone matrix (quick heuristic).
+
+    The legacy implementation solved a quadratic binary programme via Gurobi.
+    Here we approximate by selecting genes that minimise the *same-clone* score
+    in a greedy fashion to avoid heavy QP solving (still gives good results in
+    practice).  If Gurobi is available a full binary quadratic optimisation is
+    attempted.
+    """
+
+    gene2idx = {g: i for i, g in enumerate(gene_list)}
+    m = len(gene_list)
+
+    # Build same-clone matrix aggregated across trees
+    same_clone_sum = np.zeros((m, m))
+    for w, tree, node_dict in zip(tree_freq_list, tree_list, node_list):
+        sc = _create_same_clone_matrix(tree, node_dict, gene2idx)
+        same_clone_sum += w * sc
+
+    if gp is not None:
+        try:
+            _gp = _get_gurobi()
+            model = _gp.Model("marker_sameclone")
+            z = model.addVars(m, vtype=_gp.GRB.BINARY)
+            model.addConstr(z.sum() == n_markers)
+            obj = _gp.quicksum(z[i] * same_clone_sum[i, j] * z[j] for i in range(m) for j in range(m))
+            model.setObjective(obj, _gp.GRB.MINIMIZE)
+            model.setParam("OutputFlag", 0)
+            model.optimize()
+            chosen = [gene_list[i] for i in range(m) if z[i].X >= 0.5]
+            if len(chosen) == n_markers:
+                return chosen
+        except Exception as exc:
+            logger.warning("Full QP optimisation failed; falling back to greedy. (%s)", exc)
+
+    # Greedy fallback: iteratively add gene that minimises incremental obj
+    selected: List[int] = []
+    remaining = set(range(m))
+    while len(selected) < n_markers and remaining:
+        best_gene = None
+        best_score = float("inf")
+        for g_idx in remaining:
+            tmp_sel = selected + [g_idx]
+            score = same_clone_sum[np.ix_(tmp_sel, tmp_sel)].sum()
+            if score < best_score:
+                best_score = score
+                best_gene = g_idx
+        if best_gene is None:
+            break
+        selected.append(best_gene)
+        remaining.remove(best_gene)
+
+    return [gene_list[i] for i in selected]
+
+# Update exports
+__all__.extend([
+    "select_markers_fractions_weighted_single",
+    "select_markers_fractions_gp",
+])
