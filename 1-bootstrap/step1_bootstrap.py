@@ -140,8 +140,15 @@ def process_and_bootstrap_ssm(input_ssm_df, num_bootstraps, output_dir):
         mu_v_val = row['mu_v']
 
         try:
-            ref_counts_str = row['a'].split(',')
-            depth_counts_str = row['d'].split(',')
+            # Handle both single-sample (integers) and multi-sample (comma-separated strings) formats
+            if isinstance(row['a'], str):
+                # Multi-sample format: comma-separated string
+                ref_counts_str = row['a'].split(',')
+                depth_counts_str = row['d'].split(',')
+            else:
+                # Single-sample format: integer values
+                ref_counts_str = [str(row['a'])]
+                depth_counts_str = [str(row['d'])]
 
             if len(ref_counts_str) != len(depth_counts_str):
                 print(f"Warning: Mismatch in number of samples for 'a' and 'd' in mutation {mutation_id_val}. Skipping.")
@@ -152,8 +159,8 @@ def process_and_bootstrap_ssm(input_ssm_df, num_bootstraps, output_dir):
         except ValueError:
             print(f"Warning: Could not parse 'a' or 'd' columns for mutation {mutation_id_val}. Skipping.")
             continue
-        except AttributeError: # Handles case where 'a' or 'd' might not be strings (e.g. if already numbers/NaN)
-             print(f"Warning: 'a' or 'd' columns for mutation {mutation_id_val} are not strings. Skipping.")
+        except (AttributeError, TypeError): # Handles case where 'a' or 'd' might be unexpected types
+             print(f"Warning: 'a' or 'd' columns for mutation {mutation_id_val} have unexpected format. Skipping.")
              continue
 
 

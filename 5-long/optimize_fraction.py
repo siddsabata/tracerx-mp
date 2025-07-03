@@ -21,15 +21,15 @@ def create_sum_same_clone(tree_list, node_list, gene2idx, tree_freq_list=None):
     return sam_clo_matrix_sum
 
 
-def create_gene_fraction_array(tree, node_dict, clonal_freq, gene2idx, focus_sample_idx):
-    gene_fraction = np.zeros(len(gene2idx))
-    for node in tree:
-        if node in node_dict:
-            for gene in node_dict[node]:
-                idx = gene2idx[gene]
-                # changed from original clonal_freq[node][0][focus_sample_idx]
-                gene_fraction[idx] = clonal_freq[node][focus_sample_idx] 
-    return gene_fraction
+def create_gene_fraction_array(tree, node_dict, clonal_freq, gene2idx, focus_sample_idx=0):
+    gene_fraction_array = np.zeros((len(gene2idx.keys())))
+    root = root_searching(tree)
+    for node, muts_list in node_dict.items():
+        if node != root:
+            muts_idx = [gene2idx[mut] for mut in muts_list]
+            print(clonal_freq[node][0][focus_sample_idx])
+            gene_fraction_array[np.array(muts_idx)] = clonal_freq[node][0][focus_sample_idx]
+    return gene_fraction_array
 
 
 def create_concat_gene_fraction(tree_list, node_list, clonal_freq_list, gene2idx, tree_freq_list=None,focus_sample_idx=0):
@@ -101,6 +101,20 @@ def optimize_tree_distribution(F, R,  n_genes, n_markers, read_depth, lam1, lam2
     model.setObjective(gp.quicksum([lam1*Obj_frac, lam2*Obj_struct]), gp.GRB.MAXIMIZE)
     #model.setObjective(Obj_struct, gp.GRB.MAXIMIZE)
     model.optimize()
+    
+    # Check optimization status
+    if model.status != gp.GRB.OPTIMAL:
+        status_messages = {
+            gp.GRB.INFEASIBLE: "INFEASIBLE - No feasible solution exists",
+            gp.GRB.UNBOUNDED: "UNBOUNDED - Objective can be improved without limit", 
+            gp.GRB.INF_OR_UNBD: "INF_OR_UNBD - Infeasible or unbounded",
+            gp.GRB.NUMERIC_ERROR: "NUMERIC_ERROR - Numerical difficulties",
+            gp.GRB.SUBOPTIMAL: "SUBOPTIMAL - Unable to satisfy optimality tolerances",
+            gp.GRB.TIME_LIMIT: "TIME_LIMIT - Time limit reached"
+        }
+        status_msg = status_messages.get(model.status, f"Unknown status: {model.status}")
+        raise RuntimeError(f"Gurobi optimization failed with status {model.status}: {status_msg}")
+    
     return Obj_frac.X, Obj_struct.X, return_value_1d(z)
 
 
@@ -236,20 +250,6 @@ def optimize_fraction_weighted_overall(E_list, M_list, F_hat_list, tree_freq_lis
     model.setObjective(gp.quicksum(obj_list[i] * tree_freq_list[i] for i in range(n_trees)), gp.GRB.MAXIMIZE)
     model.update()
     model.optimize()
-
-    # Error handling for Gurobi status
-    if model.Status != gp.GRB.OPTIMAL:
-        print(f"[Gurobi] Model did not solve to optimality. Status code: {model.Status}")
-        if model.Status == gp.GRB.INFEASIBLE:
-            print("[Gurobi] Model is infeasible. Writing model to 'infeasible_model.lp' for debugging.")
-            model.write("infeasible_model.lp")
-        elif model.Status == gp.GRB.UNBOUNDED:
-            print("[Gurobi] Model is unbounded.")
-        else:
-            print("[Gurobi] Optimization was stopped with status:", model.Status)
-        # Return arrays of np.nan to prevent downstream .X errors
-        return np.full(n_genes, np.nan), np.full(n_trees, np.nan)
-
     return return_value_1d(z), return_value_1d(obj_list)
 
 def calculate_markers_fractions_weighted_overall(gene_list, n_markers, tree_list, node_list, clonal_freq_list_new_gt, gene2idx, tree_freq_list, subset_list=None):
@@ -493,5 +493,3 @@ def return_value_4d(x):
 #     return selected_markers
 #
 #
-
-
