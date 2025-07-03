@@ -12,6 +12,19 @@ license = {text = "MIT"}
 authors = [
     {name = "Your Name", email = "you@example.com"}
 ]
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=1.5",
+    "scipy>=1.10",
+    "matplotlib>=3.7",
+    "seaborn>=0.12",
+    "ete3>=3.1",
+    "graphviz",
+    "python-graphviz",
+    "lxml>=4.9",
+    "scikit-learn>=1.3",
+    "pyyaml>=6.0",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -19,6 +32,9 @@ dev = [
     "ruff",
     "mypy",
     "pytest",
+]
+markers = [
+    "gurobipy>=11.0.2",
 ]
 
 [tool.black]
