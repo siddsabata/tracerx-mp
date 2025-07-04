@@ -61,8 +61,8 @@ fi
 echo "Conda environment activated."
 
 # --- Script Paths and Execution ---
-# Use the absolute path to the step3_aggregate.py script based on the provided code directory
-PROCESS_SCRIPT_PATH="${CODE_DIR}/3-aggregation/step3_aggregate.py"
+# Use the absolute path to the aggregate.py script based on the provided code directory
+PROCESS_SCRIPT_PATH="${CODE_DIR}/src/aggregation/aggregate.py"
 
 if [ ! -f "$PROCESS_SCRIPT_PATH" ]; then
     echo "Error: Aggregation Python script not found at $PROCESS_SCRIPT_PATH. Exiting."

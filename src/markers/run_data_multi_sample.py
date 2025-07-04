@@ -6,9 +6,9 @@ This script works with the new multi-sample DataFrame format while maintaining
 compatibility with the original marker selection algorithms and tree distribution data.
 """
 
-from step4_optimize import *
-from step4_optimize_fraction import *
-from step4_convert_ssm import convert_ssm_to_dataframe_multi
+from optimize import *
+from optimize_fraction import *
+from convert_ssm import convert_ssm_to_dataframe_multi
 import pandas as pd
 import pickle
 import argparse
