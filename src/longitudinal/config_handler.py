@@ -62,7 +62,8 @@ def load_config(config_path: str) -> Dict:
             'method': 'phylowgs',
             'lambda1': 0.0,  # Weight for fraction-based objective
             'lambda2': 1.0,  # Weight for structure-based objective  
-            'focus_sample': 0
+            'focus_sample': 0,
+            'track_clone_freq': True  # Enable clone frequency tracking
         }
         
         for key, default_value in param_defaults.items():
@@ -117,6 +118,9 @@ Examples:
     parser.add_argument('--save-intermediate', action='store_true',
                        help='Save intermediate results for debugging (overrides config file setting)')
     
+    parser.add_argument('--plot-clonal-freq', action='store_true',
+                       help='Enable clone frequency tracking and plotting (overrides config file setting)')
+    
     return parser.parse_args()
 
 
@@ -160,6 +164,7 @@ def config_to_args(config: Dict, cmd_args: argparse.Namespace) -> argparse.Names
     args.lambda1 = params['lambda1']
     args.lambda2 = params['lambda2']
     args.focus_sample = params['focus_sample']
+    args.track_clone_freq = params['track_clone_freq']
     
     # Fixed markers (only used in fixed mode)
     args.fixed_markers = config.get('fixed_markers', [])
@@ -186,6 +191,8 @@ def config_to_args(config: Dict, cmd_args: argparse.Namespace) -> argparse.Names
         args.no_plots = True
     if cmd_args.save_intermediate:
         args.save_intermediate = True
+    if hasattr(cmd_args, 'plot_clonal_freq') and cmd_args.plot_clonal_freq:
+        args.track_clone_freq = True
     
     return args
 

@@ -157,10 +157,61 @@ def run_fixed_marker_analysis(args, logger: logging.Logger, tree_distribution_su
     
     logger.info(f"Saved final tree distribution: {final_tree_file}")
     
+    # Clone frequency tracking (if enabled)
+    clone_freq_file = None
+    if hasattr(args, 'track_clone_freq') and args.track_clone_freq:
+        logger.info("Computing clone frequencies from converged tree")
+        
+        # Import clone frequency modules
+        from clone_frequency import compute_clone_frequencies, compute_subtree_remainder
+        from clone_visualizer import plot_clone_trajectories, plot_clone_heatmap
+        from output_manager import write_clone_frequencies
+        
+        # Prepare VAF data from ddPCR measurements
+        vaf_data = []
+        for timepoint in sorted_timepoints:
+            current_ddpcr_data = timepoint_data[timepoint]
+            for gene_name in fixed_gene_names:
+                if gene_name in current_ddpcr_data.index:
+                    mut_count = current_ddpcr_data.loc[gene_name, 'MutDOR']
+                    total_count = current_ddpcr_data.loc[gene_name, 'DOR']
+                    vaf = mut_count / total_count if total_count > 0 else 0
+                    vaf_data.append({
+                        'sample': 'sample_1',  # Single sample for fixed analysis
+                        'time': timepoint,
+                        'mutation': gene_name,
+                        'vaf': vaf
+                    })
+        
+        if vaf_data:
+            import pandas as pd
+            vaf_df = pd.DataFrame(vaf_data)
+            
+            # Compute clone frequencies
+            try:
+                freq_df = compute_clone_frequencies(current_tree_summary, vaf_df)
+                freq_df = compute_subtree_remainder(freq_df, current_tree_summary)
+                
+                # Save clone frequencies
+                clone_freq_file = write_clone_frequencies(freq_df, output_dir, 'fixed')
+                
+                # Generate clone frequency visualizations
+                plot_clone_trajectories(freq_df, output_dir, 'fixed', args.patient_id)
+                plot_clone_heatmap(freq_df, output_dir, 'fixed', args.patient_id)
+                
+                logger.info(f"Clone frequency tracking completed successfully")
+                
+            except Exception as e:
+                logger.error(f"Error in clone frequency tracking: {e}")
+                clone_freq_file = None
+        else:
+            logger.warning("No VAF data available for clone frequency computation")
+    
     # Create results summary
     results_summary = {
         'analysis_summary': analysis_summary,
-        'final_tree_distribution_file': str(final_tree_file)
+        'final_tree_distribution_file': str(final_tree_file),
+        'clone_frequency_file': str(clone_freq_file) if clone_freq_file else None
     }
     
     # Save complete analysis results
