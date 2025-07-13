@@ -10,6 +10,7 @@ Authors: TracerX Pipeline Development Team
 
 import logging
 import json
+import pandas as pd
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any
@@ -169,3 +170,43 @@ def save_final_report(output_dir: Path, args, results_summary: Dict,
     logger.info(f"Analysis completed for patient {args.patient_id}")
     
     return report_file
+
+
+def write_clone_frequencies(freq_df: pd.DataFrame, output_dir: Path, 
+                          analysis_mode: str) -> Path:
+    """
+    Write clone frequency data to CSV file.
+    
+    This function saves the clone frequency DataFrame in a standardized format
+    alongside other analysis results.
+    
+    Args:
+        freq_df: DataFrame with clone frequencies [sample, time, clone_id, freq]
+        output_dir: Output directory for results
+        analysis_mode: Analysis mode ('dynamic' or 'fixed')
+        
+    Returns:
+        Path to saved clone frequencies file
+    """
+    logger.info("Writing clone frequencies to CSV file")
+    
+    # Create mode-specific output directory
+    mode_dir = output_dir / f'{analysis_mode}_marker_analysis'
+    mode_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Define output file path
+    clone_freq_file = mode_dir / 'clone_frequencies.csv'
+    
+    # Sort data for consistent output
+    freq_df_sorted = freq_df.sort_values(['sample', 'time', 'clone_id'])
+    
+    # Save to CSV with standard formatting
+    freq_df_sorted.to_csv(clone_freq_file, index=False, float_format='%.6f')
+    
+    logger.info(f"Saved clone frequencies: {clone_freq_file}")
+    logger.info(f"Clone frequency data shape: {freq_df_sorted.shape}")
+    logger.info(f"Samples: {freq_df_sorted['sample'].nunique()}")
+    logger.info(f"Timepoints: {freq_df_sorted['time'].nunique()}")
+    logger.info(f"Clones: {freq_df_sorted['clone_id'].nunique()}")
+    
+    return clone_freq_file

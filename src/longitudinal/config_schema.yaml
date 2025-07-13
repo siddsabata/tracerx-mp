@@ -26,6 +26,7 @@ parameters:
   lambda1: 0.0  # Weight for fraction-based objective (0.0 = ignore fractions)
   lambda2: 1.0  # Weight for structure-based objective (1.0 = focus on tree structure)
   focus_sample: 0  # Sample index for marker selection
+  track_clone_freq: true  # Enable clone frequency tracking and visualization
 
 # Fixed marker specification (for fixed/both modes)
 fixed_markers:
