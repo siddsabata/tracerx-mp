@@ -176,10 +176,12 @@ generate_patient_config() {
     echo "  Config path: $config_output_path"
     
     # Read template and substitute placeholders
+    # Use project root directory (parent of scripts directory) for CODE_DIR
+    PROJECT_ROOT_DIR=$(dirname "${SCRIPT_DIR}")
     sed -e "s|PLACEHOLDER_PATIENT_ID|${patient_id}|g" \
         -e "s|PLACEHOLDER_SSM_FILE|${ssm_file}|g" \
         -e "s|PLACEHOLDER_OUTPUT_DIR|${patient_output_dir}|g" \
-        -e "s|PLACEHOLDER_CODE_DIR|${SCRIPT_DIR}|g" \
+        -e "s|PLACEHOLDER_CODE_DIR|${PROJECT_ROOT_DIR}|g" \
         "$CONFIG_TEMPLATE" > "$config_output_path"
     
     echo "  Config generated successfully"
