@@ -4,7 +4,7 @@
 mkdir -p logs
 
 # install phylowgs 
-cd 2-phylowgs
+cd src/phylowgs
 git clone https://github.com/morrislab/phylowgs.git
 cd phylowgs
 echo "repo cloned; compiling phylowgs"

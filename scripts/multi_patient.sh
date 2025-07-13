@@ -1,6 +1,6 @@
 #!/bin/bash
 # Multi-Patient Pipeline Script for TracerX Marker Selection Pipeline
-# Processes multiple SSM files using the existing single-patient master_pipeline.sh
+# Processes multiple SSM files using the existing single-patient run_pipeline.sh
 # Usage: bash multi_patient_pipeline.sh <ssm_directory> <config_template> <output_base_directory> [--delay=N] [--dry-run]
 # 
 # Example: bash multi_patient_pipeline.sh data/patients/ configs/template_multi_patient.yaml /path/to/results/
@@ -98,10 +98,10 @@ if [[ ! "$OUTPUT_BASE_DIRECTORY" = /* ]]; then
     OUTPUT_BASE_DIRECTORY="${SCRIPT_DIR}/${OUTPUT_BASE_DIRECTORY}"
 fi
 
-# Validate master_pipeline.sh exists
-MASTER_PIPELINE="${SCRIPT_DIR}/master_pipeline.sh"
-if [ ! -f "$MASTER_PIPELINE" ]; then
-    echo "Error: master_pipeline.sh not found at: $MASTER_PIPELINE"
+# Validate run_pipeline.sh exists
+MAIN_PIPELINE="${SCRIPT_DIR}/run_pipeline.sh"
+if [ ! -f "$MAIN_PIPELINE" ]; then
+    echo "Error: run_pipeline.sh not found at: $MAIN_PIPELINE"
     exit 1
 fi
 
@@ -196,7 +196,7 @@ submit_patient_pipeline() {
     echo "  Log: $patient_log_file"
     
     if [ "$DRY_RUN" == "--dry-run" ]; then
-        echo "  DRY RUN: Would execute: bash ${MASTER_PIPELINE} ${config_path}"
+        echo "  DRY RUN: Would execute: bash ${MAIN_PIPELINE} ${config_path}"
         return 0
     fi
     
@@ -204,10 +204,10 @@ submit_patient_pipeline() {
     {
         echo "=== Patient $patient_id Pipeline Submission: $(date) ==="
         echo "Config: $config_path"
-        echo "Command: bash ${MASTER_PIPELINE} ${config_path}"
+        echo "Command: bash ${MAIN_PIPELINE} ${config_path}"
         echo "----------------------------------------"
         
-        bash "${MASTER_PIPELINE}" "${config_path}"
+        bash "${MAIN_PIPELINE}" "${config_path}"
         local exit_code=$?
         
         echo "----------------------------------------"

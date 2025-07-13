@@ -148,7 +148,7 @@ fi
 echo "Python package verification successful."
 
 # --- Script Execution ---
-LONGITUDINAL_SCRIPT_PATH="${CODE_DIR}/5-long/longitudinal_main.py"
+LONGITUDINAL_SCRIPT_PATH="${CODE_DIR}/src/longitudinal/longitudinal_main.py"
 
 echo "DEBUG: Longitudinal script path: $LONGITUDINAL_SCRIPT_PATH"
 echo "DEBUG: Script exists: $(ls -la "$LONGITUDINAL_SCRIPT_PATH" 2>/dev/null || echo "NOT FOUND")"

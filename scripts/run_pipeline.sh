@@ -1,9 +1,9 @@
 #!/bin/bash
 # Master Pipeline Script for TracerX Marker Selection Pipeline (Steps 1-4)
 # This script runs on the login node and submits individual SLURM jobs for each pipeline step
-# Usage: bash master_pipeline.sh config.yaml [--dry-run]
-# Example: bash master_pipeline.sh configs/test_analysis.yaml
-# Example: bash master_pipeline.sh configs/test_analysis.yaml --dry-run
+# Usage: bash run_pipeline.sh config.yaml [--dry-run]
+# Example: bash run_pipeline.sh configs/analysis/test_analysis.yaml
+# Example: bash run_pipeline.sh configs/analysis/test_analysis.yaml --dry-run
 
 set -e  # Exit on any error
 
@@ -314,25 +314,25 @@ submit_job_yaml() {
 # Step 1: Bootstrap
 echo "Starting Bootstrap Stage..."
 BOOTSTRAP_JOB_ID=$(submit_job_yaml "bootstrap" "" \
-    "${CODE_DIR}/1-bootstrap/bootstrap.sh" \
+    "${CODE_DIR}/src/bootstrap/bootstrap.sh" \
     "${INPUT_SSM_FILE}" "${BOOTSTRAP_STAGE_OUTPUT_DIR}" "${CODE_DIR}" "${NUM_BOOTSTRAPS}")
 
 # Step 2: PhyloWGS (Array Job)
 echo "Starting PhyloWGS Stage..."
 PHYLOWGS_JOB_ID=$(submit_job_yaml "phylowgs" "${BOOTSTRAP_JOB_ID}" \
-    "${CODE_DIR}/2-phylowgs/phylowgs.sh" \
+    "${CODE_DIR}/src/phylowgs/phylowgs.sh" \
     "${BOOTSTRAPS_DATA_DIR}" "${CODE_DIR}")
 
 # Step 3: Aggregation
 echo "Starting Aggregation Stage..."
 AGGREGATION_JOB_ID=$(submit_job_yaml "aggregation" "${PHYLOWGS_JOB_ID}" \
-    "${CODE_DIR}/3-aggregation/aggregation.sh" \
+    "${CODE_DIR}/src/aggregation/aggregation.sh" \
     "${PATIENT_ID}" "${BOOTSTRAPS_DATA_DIR}" "${AGGREGATION_RESULTS_DIR}" "${CODE_DIR}")
 
 # Step 4: Marker Selection
 echo "Starting Marker Selection Stage..."
 MARKER_SELECTION_JOB_ID=$(submit_job_yaml "marker_selection" "${AGGREGATION_JOB_ID}" \
-    "${CODE_DIR}/4-markers/marker_selection.sh" \
+    "${CODE_DIR}/src/markers/marker_selection.sh" \
     "${PATIENT_ID}" "${AGGREGATION_RESULTS_DIR}" "${INPUT_SSM_FILE}" "${CODE_DIR}" \
     "${READ_DEPTH}" "${FILTER_STRATEGY}" "${FILTER_THRESHOLD}")
 

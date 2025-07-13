@@ -44,7 +44,7 @@ echo "Current working directory at start: $(pwd)" >&2
 source ~/miniconda3/bin/activate phylowgs_env
 
 # Use the absolute path to the phylowgs directory based on the provided code directory
-phylowgs_dir="${CODE_DIR}/2-phylowgs/phylowgs"
+phylowgs_dir="${CODE_DIR}/src/phylowgs/phylowgs"
 
 # Check if phylowgs directory exists
 if [ ! -d "$phylowgs_dir" ]; then
