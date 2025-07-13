@@ -58,14 +58,14 @@ echo "Conda environment preprocess_env activated successfully."
 echo "Running step1_bootstrap.py..."
 
 # Use the absolute path to the step1_bootstrap.py file based on the provided code directory
-BOOTSTRAP_PY_PATH="${CODE_DIR}/1-bootstrap/step1_bootstrap.py"
+BOOTSTRAP_PY_PATH="${CODE_DIR}/src/bootstrap/step1_bootstrap.py"
 echo "Using step1_bootstrap.py at: $BOOTSTRAP_PY_PATH"
 
 # Verify the step1_bootstrap.py file exists
 if [ ! -f "$BOOTSTRAP_PY_PATH" ]; then
     echo "Error: Could not find step1_bootstrap.py at $BOOTSTRAP_PY_PATH"
     echo "Current working directory: $(pwd)"
-    echo "Files in code directory: $(ls -la $CODE_DIR/1-bootstrap/)"
+    echo "Files in code directory: $(ls -la $CODE_DIR/src/bootstrap/)"
     exit 1
 fi
 
