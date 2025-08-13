@@ -31,6 +31,7 @@ parameters:
   # Weight for structure-based objective (1.0 = focus on tree structure)
   lambda2: 1.0
   focus_sample: 0
+  track_clone_freq: true  # Enable clone frequency tracking and visualization
 
 # Fixed markers - not used in dynamic mode but required for schema
 fixed_markers: []
